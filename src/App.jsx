@@ -1,29 +1,30 @@
 import React, { useState, useMemo, useRef, useEffect, useCallback } from "react";
 import {
-    Home, Clock, NotebookPen, HeartHandshake, Users, Bell, Trophy,
-    BarChart3, User, Play, Pause, RotateCcw, Flame, CheckCircle2,
-    Circle, Search, Plus, X, Award, Calendar, Sparkles, Link2, Menu,
-    Trash2, ChevronRight, Sunrise, PlusCircle, BookMarked, TrendingUp,
+  Home, Clock, NotebookPen, HeartHandshake, Users, Bell, Trophy,
+  BarChart3, User, Play, Pause, RotateCcw, Flame, CheckCircle2,
+  Circle, Search, Plus, X, Award, Calendar, Sparkles, Link2, Menu,
+  Trash2, ChevronRight, Sunrise, PlusCircle, BookMarked, TrendingUp,
+  Pencil, Save, Copy, LogOut, Mail, UserX, UserPlus, Check,
 } from "lucide-react";
 import {
-    LineChart, Line, BarChart, Bar, XAxis, YAxis, Tooltip,
-    ResponsiveContainer, CartesianGrid, PieChart, Pie, Cell,
+  LineChart, Line, BarChart, Bar, XAxis, YAxis, Tooltip,
+  ResponsiveContainer, CartesianGrid, PieChart, Pie, Cell,
 } from "recharts";
 
 /* ============================= CONSTANTS ============================= */
 
 const DEFAULT_CATEGORIES = [
-    "Intercession", "Thanksgiving", "Worship",
-    "Meditation", "Scripture Reading", "Petition",
-  ];
+  "Intercession", "Thanksgiving", "Worship",
+  "Meditation", "Scripture Reading", "Petition",
+];
 
 const CATEGORY_COLORS = {
-    "Intercession": "#96727E",
-    "Thanksgiving": "#C7963C",
-    "Worship": "#2F3A56",
-    "Meditation": "#83987F",
-    "Scripture Reading": "#6E85A8",
-    "Petition": "#A66A47",
+  "Intercession": "#96727E",
+  "Thanksgiving": "#C7963C",
+  "Worship": "#2F3A56",
+  "Meditation": "#83987F",
+  "Scripture Reading": "#6E85A8",
+  "Petition": "#A66A47",
 };
 const FALLBACK_COLORS = ["#8C8672", "#B08BA0", "#7C9E86", "#A98A50"];
 
@@ -38,7 +39,7 @@ const VERSES = [
   { text: "In the morning will I direct my prayer unto thee, and will look up.", ref: "Psalm 5:3" },
   { text: "Let us therefore come boldly unto the throne of grace, that we may obtain mercy, and find grace to help in time of need.", ref: "Hebrews 4:16" },
   { text: "The Lord is nigh unto all them that call upon him, to all that call upon him in truth.", ref: "Psalm 145:18" },
-  ];
+];
 
 const AVATARS = ["🕊️", "🌿", "✨", "🕯️", "🌅", "📖", "🙏", "⛲"];
 
@@ -48,208 +49,210 @@ const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 const uid = () => Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
 
+const slugify = (s) => s.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+
 const toKey = (d) => {
-    const dt = new Date(d);
-    return dt.getFullYear() + "-" + String(dt.getMonth() + 1).padStart(2, "0") + "-" + String(dt.getDate()).padStart(2, "0");
+  const dt = new Date(d);
+  return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, "0")}-${String(dt.getDate()).padStart(2, "0")}`;
 };
 
 const startOfWeek = (d) => {
-    const dt = new Date(d);
-    const day = dt.getDay();
-    const diff = (day === 0 ? -6 : 1) - day; // Monday start
-    dt.setDate(dt.getDate() + diff);
-    dt.setHours(0, 0, 0, 0);
-    return dt;
+  const dt = new Date(d);
+  const day = dt.getDay();
+  const diff = (day === 0 ? -6 : 1) - day; // Monday start
+  dt.setDate(dt.getDate() + diff);
+  dt.setHours(0, 0, 0, 0);
+  return dt;
 };
 
 const formatDate = (d) =>
-    new Date(d).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+  new Date(d).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
 
 const formatDateTime = (d) =>
-    new Date(d).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+  new Date(d).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
 
 const formatHrs = (mins) => (mins / 60).toFixed(1);
 
 const catColor = (cat, customList) => {
-    if (CATEGORY_COLORS[cat]) return CATEGORY_COLORS[cat];
-    const idx = customList.indexOf(cat) % FALLBACK_COLORS.length;
-    return FALLBACK_COLORS[idx < 0 ? 0 : idx];
+  if (CATEGORY_COLORS[cat]) return CATEGORY_COLORS[cat];
+  const idx = customList.indexOf(cat) % FALLBACK_COLORS.length;
+  return FALLBACK_COLORS[idx < 0 ? 0 : idx];
 };
 
 /* ---------- streak + stats ---------- */
 
 function computeDayTotals(sessions) {
-    const map = {};
-    sessions.forEach((s) => {
-          const k = toKey(s.date);
-          map[k] = (map[k] || 0) + s.duration;
-    });
-    return map;
+  const map = {};
+  sessions.forEach((s) => {
+    const k = toKey(s.date);
+    map[k] = (map[k] || 0) + s.duration;
+  });
+  return map;
 }
 
 function computeCurrentStreak(sessions) {
-    const dayTotals = computeDayTotals(sessions);
-    let cursor = new Date();
-    cursor.setHours(0, 0, 0, 0);
-    if (!dayTotals[toKey(cursor)]) {
-          cursor.setDate(cursor.getDate() - 1);
-          if (!dayTotals[toKey(cursor)]) return 0;
-    }
-    let streak = 0;
-    while (dayTotals[toKey(cursor)]) {
-          streak += 1;
-          cursor.setDate(cursor.getDate() - 1);
-    }
-    return streak;
+  const dayTotals = computeDayTotals(sessions);
+  let cursor = new Date();
+  cursor.setHours(0, 0, 0, 0);
+  if (!dayTotals[toKey(cursor)]) {
+    cursor.setDate(cursor.getDate() - 1);
+    if (!dayTotals[toKey(cursor)]) return 0;
+  }
+  let streak = 0;
+  while (dayTotals[toKey(cursor)]) {
+    streak += 1;
+    cursor.setDate(cursor.getDate() - 1);
+  }
+  return streak;
 }
 
 function computeLongestStreak(sessions) {
-    const dayTotals = computeDayTotals(sessions);
-    const keys = Object.keys(dayTotals).sort();
-    if (!keys.length) return 0;
-    let longest = 1, run = 1;
-    for (let i = 1; i < keys.length; i++) {
-          const prev = new Date(keys[i - 1]);
-          const cur = new Date(keys[i]);
-          const diffDays = Math.round((cur - prev) / 86400000);
-          if (diffDays === 1) { run += 1; } else { run = 1; }
-          longest = Math.max(longest, run);
-    }
-    return longest;
+  const dayTotals = computeDayTotals(sessions);
+  const keys = Object.keys(dayTotals).sort();
+  if (!keys.length) return 0;
+  let longest = 1, run = 1;
+  for (let i = 1; i < keys.length; i++) {
+    const prev = new Date(keys[i - 1]);
+    const cur = new Date(keys[i]);
+    const diffDays = Math.round((cur - prev) / 86400000);
+    if (diffDays === 1) { run += 1; } else { run = 1; }
+    longest = Math.max(longest, run);
+  }
+  return longest;
 }
 
 function computeStats(sessions) {
-    const totalMinutes = sessions.reduce((a, s) => a + s.duration, 0);
-    const byCategory = {};
-    sessions.forEach((s) => { byCategory[s.category] = (byCategory[s.category] || 0) + s.duration; });
-    let mostCommon = null, mostCount = 0;
-    const countByCategory = {};
-    sessions.forEach((s) => { countByCategory[s.category] = (countByCategory[s.category] || 0) + 1; });
-    Object.entries(countByCategory).forEach(([cat, count]) => {
-          if (count > mostCount) { mostCount = count; mostCommon = cat; }
-    });
-    return {
-          totalMinutes,
-          totalHours: totalMinutes / 60,
-          avgSessionMin: sessions.length ? totalMinutes / sessions.length : 0,
-          mostCommonCategory: mostCommon,
-          byCategory,
-          currentStreak: computeCurrentStreak(sessions),
-          longestStreak: computeLongestStreak(sessions),
-          sessionCount: sessions.length,
-    };
+  const totalMinutes = sessions.reduce((a, s) => a + s.duration, 0);
+  const byCategory = {};
+  sessions.forEach((s) => { byCategory[s.category] = (byCategory[s.category] || 0) + s.duration; });
+  let mostCommon = null, mostCount = 0;
+  const countByCategory = {};
+  sessions.forEach((s) => { countByCategory[s.category] = (countByCategory[s.category] || 0) + 1; });
+  Object.entries(countByCategory).forEach(([cat, count]) => {
+    if (count > mostCount) { mostCount = count; mostCommon = cat; }
+  });
+  return {
+    totalMinutes,
+    totalHours: totalMinutes / 60,
+    avgSessionMin: sessions.length ? totalMinutes / sessions.length : 0,
+    mostCommonCategory: mostCommon,
+    byCategory,
+    currentStreak: computeCurrentStreak(sessions),
+    longestStreak: computeLongestStreak(sessions),
+    sessionCount: sessions.length,
+  };
 }
 
 function weekMinutes(sessions, weekStart) {
-    const weekEnd = new Date(weekStart);
-    weekEnd.setDate(weekEnd.getDate() + 7);
-    return sessions
-      .filter((s) => {
-              const d = new Date(s.date);
-              return d >= weekStart && d < weekEnd;
-      })
-      .reduce((a, s) => a + s.duration, 0);
+  const weekEnd = new Date(weekStart);
+  weekEnd.setDate(weekEnd.getDate() + 7);
+  return sessions
+    .filter((s) => {
+      const d = new Date(s.date);
+      return d >= weekStart && d < weekEnd;
+    })
+    .reduce((a, s) => a + s.duration, 0);
 }
 
 /* ============================= SEED DATA ============================= */
 
 function seedSessions() {
-    const notes = [
-          "Felt a real sense of peace during this time.",
-          "Prayed for the family situation we discussed last week.",
-          "Read through Psalm 23 slowly, sat with it a while.",
-          "Quiet morning, needed the stillness.",
-          "Brought the week's worries before the Lord.",
-          "Gave thanks for how things worked out at work.",
-          "",
-        ];
-    const cats = DEFAULT_CATEGORIES;
-    const out = [];
-    for (let i = 20; i >= 0; i--) {
-          if (Math.random() < 0.28) continue; // skip some days
-      const d = new Date();
-          d.setDate(d.getDate() - i);
-          d.setHours(6 + Math.floor(Math.random() * 14), Math.floor(Math.random() * 60), 0, 0);
-          out.push({
-                  id: uid(),
-                  date: d.toISOString(),
-                  duration: 10 + Math.floor(Math.random() * 40),
-                  category: cats[Math.floor(Math.random() * cats.length)],
-                  notes: notes[Math.floor(Math.random() * notes.length)],
-          });
-    }
-    return out.sort((a, b) => new Date(b.date) - new Date(a.date));
+  const notes = [
+    "Felt a real sense of peace during this time.",
+    "Prayed for the family situation we discussed last week.",
+    "Read through Psalm 23 slowly, sat with it a while.",
+    "Quiet morning, needed the stillness.",
+    "Brought the week's worries before the Lord.",
+    "Gave thanks for how things worked out at work.",
+    "",
+  ];
+  const cats = DEFAULT_CATEGORIES;
+  const out = [];
+  for (let i = 20; i >= 0; i--) {
+    if (Math.random() < 0.28) continue; // skip some days
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    d.setHours(6 + Math.floor(Math.random() * 14), Math.floor(Math.random() * 60), 0, 0);
+    out.push({
+      id: uid(),
+      date: d.toISOString(),
+      duration: 10 + Math.floor(Math.random() * 40),
+      category: cats[Math.floor(Math.random() * cats.length)],
+      notes: notes[Math.floor(Math.random() * notes.length)],
+    });
+  }
+  return out.sort((a, b) => new Date(b.date) - new Date(a.date));
 }
 
 const SEED_JOURNAL = [
   {
-        id: uid(),
-        date: new Date(Date.now() - 3 * 86400000).toISOString(),
-        title: "Stillness in the morning",
-        text: "Woke up early and just sat in silence before turning to words. There is something about the quiet that says more than any request I could bring.",
+    id: uid(),
+    date: new Date(Date.now() - 3 * 86400000).toISOString(),
+    title: "Stillness in the morning",
+    text: "Woke up early and just sat in silence before turning to words. There's something about the quiet that says more than any request I could bring.",
   },
   {
-        id: uid(),
-        date: new Date(Date.now() - 8 * 86400000).toISOString(),
-        title: "Answered, finally",
-        text: "The thing I have been bringing up for months shifted this week. Grateful doesn't feel like a big enough word for it.",
+    id: uid(),
+    date: new Date(Date.now() - 8 * 86400000).toISOString(),
+    title: "Answered, finally",
+    text: "The thing I've been bringing up for months shifted this week. Grateful doesn't feel like a big enough word for it.",
   },
-  ];
+];
 
 const SEED_REQUESTS = [
   { id: uid(), name: "Mom's recovery", status: "ongoing", notes: "Continued healing after surgery.", dateAdded: new Date(Date.now() - 14 * 86400000).toISOString(), dateAnswered: null },
   { id: uid(), name: "Job interview for Sam", status: "answered", notes: "Offer came through Tuesday.", dateAdded: new Date(Date.now() - 20 * 86400000).toISOString(), dateAnswered: new Date(Date.now() - 2 * 86400000).toISOString() },
   { id: uid(), name: "Wisdom for a decision", status: "ongoing", notes: "Whether to move for the new role.", dateAdded: new Date(Date.now() - 5 * 86400000).toISOString(), dateAnswered: null },
-  ];
+];
 
 const SEED_CHAIN = [
   { id: uid(), name: "Grandma Ruth", note: "Health and comfort", prayedDate: null },
   { id: uid(), name: "The Alvarez family", note: "New baby, adjusting to sleep", prayedDate: toKey(new Date()) },
   { id: uid(), name: "Pastor Dan", note: "Wisdom for Sunday's message", prayedDate: null },
   { id: uid(), name: "James (coworker)", note: "Going through a hard season", prayedDate: null },
-  ];
+];
 
 const SEED_REMINDERS = [
   { id: uid(), label: "Morning quiet time", time: "06:30", days: [1, 2, 3, 4, 5] },
   { id: uid(), label: "Evening gratitude", time: "21:00", days: [0, 1, 2, 3, 4, 5, 6] },
   { id: uid(), label: "Sunday intercession", time: "17:00", days: [0] },
-  ];
+];
 
 const CHALLENGE = {
-    title: "30 Days of Faithfulness",
-    goalHours: 100,
-    endsInDays: 9,
-    members: [
-      { name: "You", isUser: true },
-      { name: "Priya", hours: 14.5 },
-      { name: "Marcus", hours: 11.2 },
-      { name: "Grace", hours: 9.8 },
-      { name: "Tomas", hours: 7.4 },
-        ],
+  title: "30 Days of Faithfulness",
+  goalHours: 100,
+  endsInDays: 9,
 };
+
+const SEED_CHALLENGE_MEMBERS = [
+  { id: uid(), name: "Priya", hours: 14.5 },
+  { id: uid(), name: "Marcus", hours: 11.2 },
+  { id: uid(), name: "Grace", hours: 9.8 },
+  { id: uid(), name: "Tomas", hours: 7.4 },
+];
 
 /* ============================= BADGES ============================= */
 
 const BADGES = [
   { id: "first", title: "First step", desc: "Log your first session", icon: Sunrise,
-       check: (s) => s.sessionCount >= 1 },
+    check: (s) => s.sessionCount >= 1 },
   { id: "week", title: "Week of faith", desc: "Reach a 7-day streak", icon: Flame,
-       check: (s) => s.longestStreak >= 7 },
+    check: (s) => s.longestStreak >= 7 },
   { id: "month", title: "Devoted heart", desc: "Reach a 30-day streak", icon: Flame,
-       check: (s) => s.longestStreak >= 30 },
+    check: (s) => s.longestStreak >= 30 },
   { id: "ten", title: "Ten hours", desc: "Log 10 total hours", icon: Clock,
-       check: (s) => s.totalHours >= 10 },
+    check: (s) => s.totalHours >= 10 },
   { id: "fifty", title: "Fifty hours", desc: "Log 50 total hours", icon: Clock,
-       check: (s) => s.totalHours >= 50 },
+    check: (s) => s.totalHours >= 50 },
   { id: "hundred", title: "Hundred hours", desc: "Log 100 total hours", icon: Trophy,
-       check: (s) => s.totalHours >= 100 },
+    check: (s) => s.totalHours >= 100 },
   { id: "journal", title: "Journal keeper", desc: "Write 5 journal entries", icon: NotebookPen,
-       check: (s, extra) => extra.journalCount >= 5 },
+    check: (s, extra) => extra.journalCount >= 5 },
   { id: "warrior", title: "Prayer warrior", desc: "Log 50 sessions", icon: Award,
-       check: (s) => s.sessionCount >= 50 },
+    check: (s) => s.sessionCount >= 50 },
   { id: "chain", title: "Chain keeper", desc: "Pray for everyone in your chain in one day", icon: Link2,
-       check: (s, extra) => extra.chainAllPrayedToday },
-  ];
+    check: (s, extra) => extra.chainAllPrayedToday },
+];
 
 /* ============================= SMALL UI PARTS ============================= */
 
@@ -286,6 +289,38 @@ function Confetti({ show }) {
   );
 }
 
+function CopyLinkRow({ link, label }) {
+  const [copied, setCopied] = useState(false);
+  const inputRef = useRef(null);
+
+  const copy = async () => {
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(link);
+      } else if (inputRef.current) {
+        inputRef.current.select();
+        document.execCommand("copy");
+      }
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      if (inputRef.current) inputRef.current.select();
+    }
+  };
+
+  return (
+    <div className="copy-link-row">
+      {label && <span className="copy-link-label">{label}</span>}
+      <div className="copy-link-field">
+        <input ref={inputRef} readOnly value={link} onFocus={(e) => e.target.select()} />
+        <button type="button" className="secondary-btn" onClick={copy}>
+          {copied ? <><Check size={14} /> Copied</> : <><Copy size={14} /> Copy link</>}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function EmptyState({ icon: Icon, title, body }) {
   return (
     <div className="empty-state">
@@ -296,43 +331,148 @@ function EmptyState({ icon: Icon, title, body }) {
   );
 }
 
-/* ============================= APP ============================= */
+/* ============================= AUTH ============================= */
 
-function loadLS(key, fallback) {
-  try {
-    const saved = localStorage.getItem(key);
-    if (saved) return JSON.parse(saved);
-  } catch (e) {}
-  return fallback;
+function AuthGate({ accounts, setAccounts, setCurrentUser }) {
+  const [mode, setMode] = useState("signup");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [email, setEmail] = useState("");
+  const [error, setError] = useState("");
+
+  const findByEmail = (addr) => accounts.find((a) => a.email.toLowerCase() === addr.trim().toLowerCase());
+
+  const submitSignup = (e) => {
+    e.preventDefault();
+    setError("");
+    if (!firstName.trim() || !lastName.trim() || !email.trim()) {
+      setError("Fill in first name, last name, and email to continue.");
+      return;
+    }
+    if (!/^\S+@\S+\.\S+$/.test(email.trim())) {
+      setError("Enter a valid email address, like you@example.com.");
+      return;
+    }
+    if (findByEmail(email)) {
+      setError("An account with that email already exists — log in instead.");
+      setMode("login");
+      return;
+    }
+    const account = {
+      id: uid(),
+      firstName: firstName.trim(),
+      lastName: lastName.trim(),
+      email: email.trim(),
+      memberSince: new Date().toISOString(),
+    };
+    setAccounts((prev) => [...prev, account]);
+    setCurrentUser(account);
+  };
+
+  const submitLogin = (e) => {
+    e.preventDefault();
+    setError("");
+    const found = findByEmail(email);
+    if (!found) {
+      setError("No account found with that email — sign up below.");
+      setMode("signup");
+      return;
+    }
+    setCurrentUser(found);
+  };
+
+  return (
+    <div className="auth-screen">
+      <div className="auth-card">
+        <div className="auth-brand">
+          <span className="brand-mark">🕯️</span>
+          <div>
+            <div className="brand-title">Still Hours</div>
+            <div className="brand-sub">a prayer companion</div>
+          </div>
+        </div>
+        <p className="auth-verse">"Be still, and know that I am God." — Psalm 46:10, KJV</p>
+
+        <div className="tab-row">
+          <button className={`tab ${mode === "signup" ? "active" : ""}`} onClick={() => { setMode("signup"); setError(""); }}>
+            <UserPlus size={14} /> Sign up
+          </button>
+          <button className={`tab ${mode === "login" ? "active" : ""}`} onClick={() => { setMode("login"); setError(""); }}>
+            <Mail size={14} /> Log in
+          </button>
+        </div>
+
+        {mode === "signup" ? (
+          <form className="form-grid" onSubmit={submitSignup} noValidate>
+            <label>First name
+              <input value={firstName} onChange={(e) => setFirstName(e.target.value)} placeholder="First name" />
+            </label>
+            <label>Last name
+              <input value={lastName} onChange={(e) => setLastName(e.target.value)} placeholder="Last name" />
+            </label>
+            <label className="full-width">Email
+              <input type="text" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" />
+            </label>
+            {error && <p className="full-width auth-error">{error}</p>}
+            <div className="full-width form-actions">
+              <button type="submit" className="primary-btn"><UserPlus size={16} /> Create account</button>
+            </div>
+          </form>
+        ) : (
+          <form className="form-grid" onSubmit={submitLogin} noValidate>
+            <label className="full-width">Email
+              <input type="text" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" />
+            </label>
+            {error && <p className="full-width auth-error">{error}</p>}
+            <div className="full-width form-actions">
+              <button type="submit" className="primary-btn"><Mail size={16} /> Log in</button>
+            </div>
+          </form>
+        )}
+        <p className="auth-note">This is an in-session account for demo purposes — no password needed, and data isn't saved once you close the tab.</p>
+      </div>
+    </div>
+  );
 }
 
+/* ============================= APP ============================= */
+
 export default function PrayerHoursApp() {
+  const [accounts, setAccounts] = useState([]);
+  const [currentUser, setCurrentUser] = useState(null);
+
+  if (!currentUser) {
+    return (
+      <>
+        <GlobalStyle />
+        <AuthGate accounts={accounts} setAccounts={setAccounts} setCurrentUser={setCurrentUser} />
+      </>
+    );
+  }
+
+  return <MainApp account={currentUser} onLogout={() => setCurrentUser(null)} />;
+}
+
+function MainApp({ account, onLogout }) {
   const [view, setView] = useState("dashboard");
   const [navOpen, setNavOpen] = useState(false);
 
-  const [profile, setProfile] = useState(() => loadLS("ph_profile", {
-    name: "Jean",
+  const [profile, setProfile] = useState({
+    name: `${account.firstName} ${account.lastName}`,
+    email: account.email,
     avatar: "🕊️",
     weeklyGoalHours: 5,
-    memberSince: new Date(Date.now() - 96 * 86400000).toISOString(),
-  }));
+    memberSince: account.memberSince,
+  });
 
-  const [sessions, setSessions] = useState(() => loadLS("ph_sessions", null) || seedSessions());
-  const [customCategories, setCustomCategories] = useState(() => loadLS("ph_customCategories", []));
+  const [sessions, setSessions] = useState(() => seedSessions());
+  const [customCategories, setCustomCategories] = useState([]);
   const allCategories = useMemo(() => [...DEFAULT_CATEGORIES, ...customCategories], [customCategories]);
 
-  const [journal, setJournal] = useState(() => loadLS("ph_journal", SEED_JOURNAL));
-  const [requests, setRequests] = useState(() => loadLS("ph_requests", SEED_REQUESTS));
-  const [chain, setChain] = useState(() => loadLS("ph_chain", SEED_CHAIN));
-  const [reminders, setReminders] = useState(() => loadLS("ph_reminders", SEED_REMINDERS));
-
-  useEffect(() => { localStorage.setItem("ph_profile", JSON.stringify(profile)); }, [profile]);
-  useEffect(() => { localStorage.setItem("ph_sessions", JSON.stringify(sessions)); }, [sessions]);
-  useEffect(() => { localStorage.setItem("ph_customCategories", JSON.stringify(customCategories)); }, [customCategories]);
-  useEffect(() => { localStorage.setItem("ph_journal", JSON.stringify(journal)); }, [journal]);
-  useEffect(() => { localStorage.setItem("ph_requests", JSON.stringify(requests)); }, [requests]);
-  useEffect(() => { localStorage.setItem("ph_chain", JSON.stringify(chain)); }, [chain]);
-  useEffect(() => { localStorage.setItem("ph_reminders", JSON.stringify(reminders)); }, [reminders]);
+  const [journal, setJournal] = useState(SEED_JOURNAL);
+  const [requests, setRequests] = useState(SEED_REQUESTS);
+  const [chain, setChain] = useState(SEED_CHAIN);
+  const [reminders, setReminders] = useState(SEED_REMINDERS);
 
   const [verseIdx, setVerseIdx] = useState(() => Math.floor(Math.random() * VERSES.length));
   useEffect(() => {
@@ -377,6 +517,14 @@ export default function PrayerHoursApp() {
   const deleteSession = useCallback((id) => {
     setSessions((prev) => prev.filter((s) => s.id !== id));
   }, []);
+
+  const updateSession = useCallback((id, updates) => {
+    setSessions((prev) =>
+      prev.map((s) => (s.id === id ? { ...s, ...updates } : s)).sort((a, b) => new Date(b.date) - new Date(a.date))
+    );
+  }, []);
+
+  const [challengeMembers, setChallengeMembers] = useState(() => SEED_CHALLENGE_MEMBERS);
 
   const NAV_ITEMS = [
     { id: "dashboard", label: "Dashboard", icon: Home },
@@ -427,10 +575,13 @@ export default function PrayerHoursApp() {
         </div>
         <div className="sidebar-footer">
           <div className="sidebar-avatar">{profile.avatar}</div>
-          <div>
+          <div className="sidebar-footer-main">
             <div className="sidebar-name">{profile.name}</div>
             <div className="sidebar-streak"><Flame size={12} /> {stats.currentStreak}-day streak</div>
           </div>
+          <button className="sidebar-logout" onClick={onLogout} aria-label="Log out" title="Log out">
+            <LogOut size={15} />
+          </button>
         </div>
       </nav>
 
@@ -446,6 +597,7 @@ export default function PrayerHoursApp() {
         {view === "log" && (
           <SessionLog
             sessions={sessions} addSession={addSession} deleteSession={deleteSession}
+            updateSession={updateSession}
             allCategories={allCategories} customCategories={customCategories}
             setCustomCategories={setCustomCategories}
           />
@@ -460,13 +612,16 @@ export default function PrayerHoursApp() {
           <PrayerRequests requests={requests} setRequests={setRequests} />
         )}
         {view === "chain" && (
-          <PrayerChain chain={chain} setChain={setChain} />
+          <PrayerChain chain={chain} setChain={setChain} account={account} />
         )}
         {view === "reminders" && (
           <Reminders reminders={reminders} setReminders={setReminders} />
         )}
         {view === "challenges" && (
-          <GroupChallenge stats={stats} />
+          <GroupChallenge
+            stats={stats} members={challengeMembers} setMembers={setChallengeMembers}
+            account={account}
+          />
         )}
         {view === "stats" && (
           <Statistics sessions={sessions} stats={stats} allCategories={allCategories} />
@@ -521,7 +676,7 @@ function Dashboard({ profile, sessions, stats, thisWeekMinutes, weeklySessionCou
   }, [reminders]);
 
   const milestones = [
-    { label: "Weekly hours goal (" + profile.weeklyGoalHours + "h)", value: thisWeekMinutes / 60, max: profile.weeklyGoalHours, color: "var(--accent)" },
+    { label: `Weekly hours goal (${profile.weeklyGoalHours}h)`, value: thisWeekMinutes / 60, max: profile.weeklyGoalHours, color: "var(--accent)" },
     { label: "Weekly sessions goal (5 sessions)", value: weeklySessionCount, max: 5, color: "var(--sage)" },
     { label: "Monthly hours goal (20h)", value: stats.totalHours, max: 20, color: "var(--mauve)" },
   ];
@@ -575,7 +730,7 @@ function Dashboard({ profile, sessions, stats, thisWeekMinutes, weeklySessionCou
                 <XAxis dataKey="label" tick={{ fontSize: 11, fill: "var(--ink-soft)" }} axisLine={false} tickLine={false} />
                 <YAxis tick={{ fontSize: 11, fill: "var(--ink-soft)" }} axisLine={false} tickLine={false} width={30} />
                 <Tooltip
-                  formatter={(v) => [v + " min", "Prayed"]}
+                  formatter={(v) => [`${v} min`, "Prayed"]}
                   contentStyle={{ background: "var(--paper)", border: "1px solid var(--border)", borderRadius: 10, fontSize: 12 }}
                 />
                 <Line type="monotone" dataKey="minutes" stroke="var(--deep)" strokeWidth={2.5} dot={{ r: 3, fill: "var(--accent)" }} />
@@ -655,17 +810,22 @@ function greeting() {
 
 /* ============================= SESSION LOG ============================= */
 
-function SessionLog({ sessions, addSession, deleteSession, allCategories, customCategories, setCustomCategories }) {
+function toLocalInput(d) {
+  const dt = new Date(d);
+  dt.setSeconds(0, 0);
+  const tzOffset = dt.getTimezoneOffset() * 60000;
+  return new Date(dt - tzOffset).toISOString().slice(0, 16);
+}
+
+function SessionLog({ sessions, addSession, deleteSession, updateSession, allCategories, customCategories, setCustomCategories }) {
   const [duration, setDuration] = useState(15);
   const [category, setCategory] = useState(allCategories[0]);
-  const [dateTime, setDateTime] = useState(() => {
-    const d = new Date();
-    d.setSeconds(0, 0);
-    return d.toISOString().slice(0, 16);
-  });
+  const [dateTime, setDateTime] = useState(() => toLocalInput(new Date()));
   const [notes, setNotes] = useState("");
   const [newCat, setNewCat] = useState("");
   const [filter, setFilter] = useState("All");
+  const [editId, setEditId] = useState(null);
+  const [editDraft, setEditDraft] = useState(null);
 
   const submit = (e) => {
     e.preventDefault();
@@ -680,6 +840,23 @@ function SessionLog({ sessions, addSession, deleteSession, allCategories, custom
       setCategory(trimmed);
     }
     setNewCat("");
+  };
+
+  const startEdit = (s) => {
+    setEditId(s.id);
+    setEditDraft({ duration: s.duration, category: s.category, dateTime: toLocalInput(s.date), notes: s.notes || "" });
+  };
+
+  const cancelEdit = () => { setEditId(null); setEditDraft(null); };
+
+  const saveEdit = (id) => {
+    updateSession(id, {
+      duration: Number(editDraft.duration),
+      category: editDraft.category,
+      date: new Date(editDraft.dateTime).toISOString(),
+      notes: editDraft.notes,
+    });
+    cancelEdit();
   };
 
   const filtered = filter === "All" ? sessions : sessions.filter((s) => s.category === filter);
@@ -710,7 +887,7 @@ function SessionLog({ sessions, addSession, deleteSession, allCategories, custom
               <input placeholder="Add a custom category" value={newCat} onChange={(e) => setNewCat(e.target.value)} />
               <button type="button" onClick={addCategory}><Plus size={14} /> Add category</button>
             </div>
-            <button type="submit" className="primary-btn"><PlusCircle size={16} /> Log session</button>
+            <button type="submit" className="primary-btn"><Save size={16} /> Save session</button>
           </div>
         </form>
       </section>
@@ -729,16 +906,46 @@ function SessionLog({ sessions, addSession, deleteSession, allCategories, custom
           <ul className="session-list">
             {filtered.map((s) => (
               <li key={s.id}>
-                <span className="dot" style={{ background: catColor(s.category, allCategories) }} />
-                <div className="session-main">
-                  <div className="session-top">
-                    <span className="session-cat">{s.category}</span>
-                    <span className="session-dur">{s.duration} min</span>
+                {editId === s.id ? (
+                  <div className="session-edit-form">
+                    <div className="form-grid">
+                      <label>Duration (minutes)
+                        <input type="number" min="1" max="600" value={editDraft.duration}
+                          onChange={(e) => setEditDraft({ ...editDraft, duration: e.target.value })} />
+                      </label>
+                      <label>Category
+                        <select value={editDraft.category} onChange={(e) => setEditDraft({ ...editDraft, category: e.target.value })}>
+                          {allCategories.map((c) => <option key={c} value={c}>{c}</option>)}
+                        </select>
+                      </label>
+                      <label>Date and time
+                        <input type="datetime-local" value={editDraft.dateTime}
+                          onChange={(e) => setEditDraft({ ...editDraft, dateTime: e.target.value })} />
+                      </label>
+                      <label className="full-width">Notes
+                        <textarea rows={2} value={editDraft.notes} onChange={(e) => setEditDraft({ ...editDraft, notes: e.target.value })} />
+                      </label>
+                    </div>
+                    <div className="form-actions" style={{ marginTop: 10 }}>
+                      <button className="secondary-btn" onClick={cancelEdit}><X size={14} /> Cancel</button>
+                      <button className="primary-btn" onClick={() => saveEdit(s.id)}><Save size={14} /> Save</button>
+                    </div>
                   </div>
-                  <div className="session-date">{formatDateTime(s.date)}</div>
-                  {s.notes && <div className="session-notes">{s.notes}</div>}
-                </div>
-                <button className="icon-btn" onClick={() => deleteSession(s.id)} aria-label="Delete session"><Trash2 size={15} /></button>
+                ) : (
+                  <>
+                    <span className="dot" style={{ background: catColor(s.category, allCategories) }} />
+                    <div className="session-main">
+                      <div className="session-top">
+                        <span className="session-cat">{s.category}</span>
+                        <span className="session-dur">{s.duration} min</span>
+                      </div>
+                      <div className="session-date">{formatDateTime(s.date)}</div>
+                      {s.notes && <div className="session-notes">{s.notes}</div>}
+                    </div>
+                    <button className="icon-btn" onClick={() => startEdit(s)} aria-label="Edit session"><Pencil size={15} /></button>
+                    <button className="icon-btn" onClick={() => deleteSession(s.id)} aria-label="Delete session"><Trash2 size={15} /></button>
+                  </>
+                )}
               </li>
             ))}
           </ul>
@@ -773,7 +980,7 @@ function PrayerTimer({ allCategories, addSession }) {
     const mins = Math.round(seconds / 60);
     if (mins > 0) {
       addSession({ duration: mins, category, date: new Date().toISOString(), notes: "Logged via prayer timer." });
-      setSavedMsg("Saved " + mins + " minute" + (mins === 1 ? "" : "s") + " of " + category.toLowerCase() + ".");
+      setSavedMsg(`Saved ${mins} minute${mins === 1 ? "" : "s"} of ${category.toLowerCase()}.`);
       setTimeout(() => setSavedMsg(""), 3500);
     }
     reset();
@@ -943,7 +1150,7 @@ function PrayerRequests({ requests, setRequests }) {
           </button>
         </div>
         {shown.length === 0 ? (
-          <EmptyState icon={HeartHandshake} title={"No " + tab + " requests"} body="Requests you add will show up here." />
+          <EmptyState icon={HeartHandshake} title={`No ${tab} requests`} body="Requests you add will show up here." />
         ) : (
           <ul className="request-list">
             {shown.map((r) => (
@@ -955,7 +1162,7 @@ function PrayerRequests({ requests, setRequests }) {
                   <span className="request-name">{r.name}</span>
                   {r.notes && <span className="request-notes">{r.notes}</span>}
                   <span className="request-dates">
-                    Added {formatDate(r.dateAdded)}{r.dateAnswered ? " · Answered " + formatDate(r.dateAnswered) : ""}
+                    Added {formatDate(r.dateAdded)}{r.dateAnswered ? ` · Answered ${formatDate(r.dateAnswered)}` : ""}
                   </span>
                 </div>
                 <button className="icon-btn" onClick={() => remove(r.id)} aria-label="Delete request"><Trash2 size={15} /></button>
@@ -970,7 +1177,7 @@ function PrayerRequests({ requests, setRequests }) {
 
 /* ============================= PRAYER CHAIN ============================= */
 
-function PrayerChain({ chain, setChain }) {
+function PrayerChain({ chain, setChain, account }) {
   const [name, setName] = useState("");
   const [note, setNote] = useState("");
   const today = toKey(new Date());
@@ -989,6 +1196,7 @@ function PrayerChain({ chain, setChain }) {
   const remove = (id) => setChain((prev) => prev.filter((p) => p.id !== id));
 
   const prayedCount = chain.filter((p) => p.prayedDate === today).length;
+  const inviteLink = `https://stillhours.app/chain/${slugify(account.firstName + "-" + account.lastName)}-${account.id.slice(0, 6)}`;
 
   return (
     <div className="view">
@@ -998,6 +1206,12 @@ function PrayerChain({ chain, setChain }) {
         <span>{prayedCount} of {chain.length} prayed for today</span>
         <ProgressBar value={prayedCount} max={chain.length || 1} color="var(--sage)" />
       </div>
+
+      <section className="panel">
+        <h2>Invite someone to your chain</h2>
+        <p className="subtitle" style={{ marginBottom: 12 }}>Share this link so someone can ask to be added to your prayer chain.</p>
+        <CopyLinkRow link={inviteLink} />
+      </section>
 
       <section className="panel">
         <h2>Add someone</h2>
@@ -1112,11 +1326,26 @@ function Reminders({ reminders, setReminders }) {
 
 /* ============================= GROUP CHALLENGE ============================= */
 
-function GroupChallenge({ stats }) {
-  const membersWithUser = CHALLENGE.members.map((m) => m.isUser ? { ...m, hours: stats.totalHours } : m);
+function GroupChallenge({ stats, members, setMembers, account }) {
+  const [newMember, setNewMember] = useState("");
+
+  const you = { id: "you", name: "You", hours: stats.totalHours, isUser: true };
+  const membersWithUser = [you, ...members];
   const totalHours = membersWithUser.reduce((a, m) => a + m.hours, 0);
   const pct = Math.min(100, (totalHours / CHALLENGE.goalHours) * 100);
   const sorted = [...membersWithUser].sort((a, b) => b.hours - a.hours);
+
+  const inviteLink = `https://stillhours.app/challenge/${slugify(CHALLENGE.title)}-${account.id.slice(0, 6)}`;
+
+  const addMember = (e) => {
+    e.preventDefault();
+    const trimmed = newMember.trim();
+    if (!trimmed) return;
+    setMembers((prev) => [...prev, { id: uid(), name: trimmed, hours: 0 }]);
+    setNewMember("");
+  };
+
+  const removeMember = (id) => setMembers((prev) => prev.filter((m) => m.id !== id));
 
   return (
     <div className="view">
@@ -1135,10 +1364,16 @@ function GroupChallenge({ stats }) {
       </section>
 
       <section className="panel">
+        <h2>Invite people to this challenge</h2>
+        <p className="subtitle" style={{ marginBottom: 12 }}>Share this link so others can join your group.</p>
+        <CopyLinkRow link={inviteLink} />
+      </section>
+
+      <section className="panel">
         <h2>Leaderboard</h2>
         <ul className="leaderboard-list">
           {sorted.map((m, i) => (
-            <li key={m.name} className={m.isUser ? "is-user" : ""}>
+            <li key={m.id} className={m.isUser ? "is-user" : ""}>
               <span className="rank">{i + 1}</span>
               <div className="member-avatar">{m.name[0]}</div>
               <div className="member-main">
@@ -1146,9 +1381,24 @@ function GroupChallenge({ stats }) {
                 <ProgressBar value={m.hours} max={Math.max(...membersWithUser.map((x) => x.hours), 1)} color={m.isUser ? "var(--accent)" : "var(--sage)"} height={7} />
               </div>
               <span className="member-hours">{m.hours.toFixed(1)}h</span>
+              {!m.isUser && (
+                <button className="icon-btn" onClick={() => removeMember(m.id)} aria-label={`Remove ${m.name}`}><UserX size={15} /></button>
+              )}
             </li>
           ))}
         </ul>
+      </section>
+
+      <section className="panel">
+        <h2>Add a member</h2>
+        <form className="form-grid" onSubmit={addMember}>
+          <label className="full-width">Name
+            <input value={newMember} onChange={(e) => setNewMember(e.target.value)} placeholder="Their name" required />
+          </label>
+          <div className="full-width form-actions">
+            <button type="submit" className="primary-btn"><UserPlus size={16} /> Add member</button>
+          </div>
+        </form>
       </section>
     </div>
   );
@@ -1193,7 +1443,7 @@ function Statistics({ sessions, stats, allCategories }) {
               <XAxis dataKey="label" tick={{ fontSize: 10, fill: "var(--ink-soft)" }} axisLine={false} tickLine={false} interval={1} />
               <YAxis tick={{ fontSize: 11, fill: "var(--ink-soft)" }} axisLine={false} tickLine={false} width={30} />
               <Tooltip
-                formatter={(v) => [v + " h", "Hours"]}
+                formatter={(v) => [`${v} h`, "Hours"]}
                 contentStyle={{ background: "var(--paper)", border: "1px solid var(--border)", borderRadius: 10, fontSize: 12 }}
               />
               <Bar dataKey="hours" fill="var(--deep)" radius={[4, 4, 0, 0]} />
@@ -1216,7 +1466,7 @@ function Statistics({ sessions, stats, allCategories }) {
                       <Cell key={entry.name} fill={catColor(entry.name, allCategories)} />
                     ))}
                   </Pie>
-                  <Tooltip formatter={(v, n) => [v + " h", n]} contentStyle={{ background: "var(--paper)", border: "1px solid var(--border)", borderRadius: 10, fontSize: 12 }} />
+                  <Tooltip formatter={(v, n) => [`${v} h`, n]} contentStyle={{ background: "var(--paper)", border: "1px solid var(--border)", borderRadius: 10, fontSize: 12 }} />
                 </PieChart>
               </ResponsiveContainer>
             </div>
@@ -1263,6 +1513,7 @@ function Profile({ profile, setProfile, stats, unlockedBadges }) {
           <div>
             <h2 style={{ margin: 0 }}>{profile.name}</h2>
             <p className="subtitle" style={{ margin: "4px 0 0" }}>Member for {memberDays} days · since {formatDate(profile.memberSince)}</p>
+            {profile.email && <p className="subtitle" style={{ margin: "2px 0 0", display: "flex", alignItems: "center", gap: 5 }}><Mail size={12} /> {profile.email}</p>}
           </div>
           <button className="secondary-btn" style={{ marginLeft: "auto" }} onClick={() => { setDraft(profile); setEditing((v) => !v); }}>
             {editing ? <><X size={14} /> Cancel</> : "Edit profile"}
@@ -1379,6 +1630,9 @@ function GlobalStyle() {
       .sidebar-item.active { background: var(--accent); color: #2F2A17; font-weight: 600; }
 
       .sidebar-footer { display: flex; align-items: center; gap: 10px; padding: 12px 8px 0; border-top: 1px solid rgba(237,231,214,0.12); margin-top: 8px; }
+      .sidebar-footer-main { flex: 1; min-width: 0; }
+      .sidebar-logout { background: none; border: none; color: rgba(237,231,214,0.55); cursor: pointer; padding: 6px; border-radius: 8px; flex-shrink: 0; }
+      .sidebar-logout:hover { background: rgba(237,231,214,0.1); color: #F6EFDD; }
       .sidebar-avatar { width: 34px; height: 34px; border-radius: 50%; background: rgba(237,231,214,0.12); display: flex; align-items: center; justify-content: center; font-size: 16px; }
       .sidebar-name { font-size: 13px; font-weight: 600; color: #F6EFDD; }
       .sidebar-streak { font-size: 11px; color: rgba(237,231,214,0.6); display: flex; align-items: center; gap: 4px; }
@@ -1547,6 +1801,32 @@ function GlobalStyle() {
       .avatar-picker { display: flex; gap: 8px; flex-wrap: wrap; }
       .avatar-choice { width: 40px; height: 40px; border-radius: 50%; border: 1px solid var(--border); background: var(--parchment); font-size: 18px; cursor: pointer; }
       .avatar-choice.on { border: 2px solid var(--accent); background: var(--accent-soft); }
+
+      .auth-screen {
+        min-height: 100vh; width: 100%; display: flex; align-items: center; justify-content: center;
+        background: var(--parchment); padding: 20px; font-family: 'Inter', sans-serif;
+      }
+      .auth-card {
+        background: var(--paper); border: 1px solid var(--border); border-radius: 20px;
+        padding: 34px 34px 28px; width: 100%; max-width: 420px;
+      }
+      .auth-brand { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+      .auth-brand .brand-title { font-family: 'Fraunces', serif; font-size: 18px; font-weight: 600; color: var(--deep); }
+      .auth-brand .brand-sub { font-size: 11.5px; color: var(--ink-soft); }
+      .auth-verse { font-family: 'Fraunces', serif; font-style: italic; font-size: 14.5px; color: var(--ink-soft); margin: 0 0 20px; line-height: 1.5; }
+      .auth-error { font-size: 12.5px; color: #A24B3E; background: var(--mauve-soft); border-radius: 8px; padding: 8px 12px; margin: 0; }
+      .auth-note { font-size: 11.5px; color: var(--ink-soft); margin: 18px 0 0; line-height: 1.5; }
+
+      .copy-link-row { display: flex; flex-direction: column; gap: 6px; }
+      .copy-link-label { font-size: 12.5px; font-weight: 600; color: var(--ink-soft); }
+      .copy-link-field { display: flex; gap: 8px; }
+      .copy-link-field input {
+        flex: 1; font-family: 'IBM Plex Mono', monospace; font-size: 12.5px; padding: 9px 11px;
+        border-radius: 9px; border: 1px solid var(--border); background: var(--parchment); color: var(--ink-soft);
+        min-width: 0;
+      }
+
+      .session-edit-form { flex: 1; padding: 6px 0; }
 
       .badge-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; }
       .badge-card { border-radius: 14px; padding: 16px; text-align: center; border: 1px solid var(--border); }
