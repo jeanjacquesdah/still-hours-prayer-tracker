@@ -1800,11 +1800,11 @@ function GlobalStyle() {
       .profile-stats-row span { font-size: 11.5px; color: var(--ink-soft); text-transform: uppercase; letter-spacing: 0.04em; }
       .avatar-picker { display: flex; gap: 8px; flex-wrap: wrap; }
       .avatar-choice { width: 40px; height: 40px; border-radius: 50%; border: 1px solid var(--border); background: var(--parchment); font-size: 18px; cursor: pointer; }
-      .avatar-choice.on { border: 2px solid var(--accent); background: var(--accent-soft); } .auth-decor { position: absolute; inset: 0; pointer-events: none; } .auth-decor-icon { position: absolute; font-size: 42px; opacity: 0.16; }
+      .avatar-choice.on { border: 2px solid var(--accent); background: var(--accent-soft); } .auth-decor { position: absolute; inset: 0; pointer-events: none; } .auth-decor-icon { position: absolute; font-size: 48px; opacity: 0.55; filter: drop-shadow(0 1px 2px rgba(0,0,0,0.15)); }
 
       .auth-screen {
         min-height: 100vh; width: 100%; display: flex; align-items: center; justify-content: center;
-        background: var(--parchment); padding: 20px; font-family: 'Inter', sans-serif; position: relative; overflow: hidden;
+        background: linear-gradient(135deg, #2F3A56 0%, #5B4B8A 100%); padding: 20px; font-family: 'Inter', sans-serif; position: relative; overflow: hidden;
       }
       .auth-card {
         background: var(--paper); border: 1px solid var(--border); border-radius: 20px;
