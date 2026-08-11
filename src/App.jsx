@@ -382,7 +382,7 @@ function AuthGate({ accounts, setAccounts, setCurrentUser }) {
   };
 
   return (
-    <div className="auth-screen">
+    <div className="auth-screen"><div className="auth-decor" aria-hidden="true"><span className="auth-decor-icon" style={{ top: "8%", left: "10%" }}>🕊️</span><span className="auth-decor-icon" style={{ top: "14%", right: "12%" }}>✨</span><span className="auth-decor-icon" style={{ bottom: "12%", left: "14%" }}>📖</span><span className="auth-decor-icon" style={{ bottom: "18%", right: "9%" }}>🕯️</span><span className="auth-decor-icon" style={{ top: "48%", left: "5%" }}>🙏</span><span className="auth-decor-icon" style={{ top: "52%", right: "6%" }}>🌿</span></div>
       <div className="auth-card">
         <div className="auth-brand">
           <span className="brand-mark">🕯️</span>
@@ -1800,11 +1800,11 @@ function GlobalStyle() {
       .profile-stats-row span { font-size: 11.5px; color: var(--ink-soft); text-transform: uppercase; letter-spacing: 0.04em; }
       .avatar-picker { display: flex; gap: 8px; flex-wrap: wrap; }
       .avatar-choice { width: 40px; height: 40px; border-radius: 50%; border: 1px solid var(--border); background: var(--parchment); font-size: 18px; cursor: pointer; }
-      .avatar-choice.on { border: 2px solid var(--accent); background: var(--accent-soft); }
+      .avatar-choice.on { border: 2px solid var(--accent); background: var(--accent-soft); } .auth-decor { position: absolute; inset: 0; pointer-events: none; } .auth-decor-icon { position: absolute; font-size: 42px; opacity: 0.16; }
 
       .auth-screen {
         min-height: 100vh; width: 100%; display: flex; align-items: center; justify-content: center;
-        background: var(--parchment); padding: 20px; font-family: 'Inter', sans-serif;
+        background: var(--parchment); padding: 20px; font-family: 'Inter', sans-serif; position: relative; overflow: hidden;
       }
       .auth-card {
         background: var(--paper); border: 1px solid var(--border); border-radius: 20px;
