@@ -382,7 +382,7 @@ function AuthGate({ accounts, setAccounts, setCurrentUser }) {
   };
 
   return (
-    <div className="auth-screen"><div className="auth-decor" aria-hidden="true"><span className="auth-decor-icon" style={{ top: "8%", left: "10%" }}>🕊️</span><span className="auth-decor-icon" style={{ top: "14%", right: "12%" }}>✨</span><span className="auth-decor-icon" style={{ bottom: "12%", left: "14%" }}>📖</span><span className="auth-decor-icon" style={{ bottom: "18%", right: "9%" }}>🕯️</span><span className="auth-decor-icon" style={{ top: "48%", left: "5%" }}>🙏</span><span className="auth-decor-icon" style={{ top: "52%", right: "6%" }}>🌿</span></div>
+    <div className="auth-screen"><div className="auth-decor" aria-hidden="true"><span className="auth-decor-icon" style={{ top: "8%", left: "10%" }}>🕊️</span><span className="auth-decor-icon" style={{ top: "14%", right: "12%" }}>✨</span><span className="auth-decor-icon" style={{ bottom: "12%", left: "14%" }}>📖</span><span className="auth-decor-icon" style={{ bottom: "18%", right: "9%" }}>🕯️</span><span className="auth-decor-icon" style={{ top: "48%", left: "5%" }}>🙏</span><span className="auth-decor-icon" style={{ top: "52%", right: "6%" }}>🌿</span></div><div className="auth-topbar"><div className="auth-topbar-brand"><span className="brand-mark">🕯️</span><span className="auth-topbar-title">Still Hours</span></div><span className="auth-topbar-icon" aria-hidden="true">🙏</span></div><div className="auth-center">
       <div className="auth-card">
         <div className="auth-brand">
           <span className="brand-mark">🕯️</span>
@@ -429,7 +429,7 @@ function AuthGate({ accounts, setAccounts, setCurrentUser }) {
             </div>
           </form>
         )}
-        <p className="auth-note">This is an in-session account for demo purposes — no password needed, and data isn't saved once you close the tab.</p>
+        <p className="auth-note">This is an in-session account for demo purposes — no password needed, and data isn't saved once you close the tab.</p></div>
       </div>
     </div>
   );
@@ -1802,15 +1802,15 @@ function GlobalStyle() {
       .avatar-choice { width: 40px; height: 40px; border-radius: 50%; border: 1px solid var(--border); background: var(--parchment); font-size: 18px; cursor: pointer; }
       .avatar-choice.on { border: 2px solid var(--accent); background: var(--accent-soft); } .auth-decor { position: absolute; inset: 0; pointer-events: none; } .auth-decor-icon { position: absolute; font-size: 48px; opacity: 0.55; filter: drop-shadow(0 1px 2px rgba(0,0,0,0.15)); } .auth-screen::before { content: ""; position: absolute; inset: 0; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 240 320'%3E%3Ccircle cx='120' cy='44' r='27' fill='white'/%3E%3Cpath d='M75,92 C60,150 50,230 55,270 C60,305 90,315 120,315 C150,315 180,305 185,270 C190,230 180,150 165,92 C150,105 90,105 75,92 Z' fill='white'/%3E%3Cpath d='M120,120 C112,140 100,150 88,148 C95,168 108,182 120,184 C132,182 145,168 152,148 C140,150 128,140 120,120 Z' fill='white'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: center 58%; background-size: min(70vw, 480px) auto; opacity: 0.16; pointer-events: none; }
 
-      .auth-screen {
-        min-height: 100vh; width: 100%; display: flex; align-items: center; justify-content: center;
+      .auth-screen { --parchment: #F5F1E6; --paper: #FFFDF8; --ink: #2C2A24; --ink-soft: #736C5C; --deep: #2F3A56; --deep-soft: #E7EAF1; --accent: #C7963C; --accent-soft: #F3E4C4; --sage: #7C9179; --sage-soft: #E2E9DD; --mauve: #96727E; --mauve-soft: #EFE1E5; --border: #E5DDC8;
+        min-height: 100vh; width: 100%; display: flex; flex-direction: column; align-items: center;
         background: linear-gradient(135deg, #2F3A56 0%, #5B4B8A 100%); padding: 20px; font-family: 'Inter', sans-serif; position: relative; overflow: hidden;
       }
       .auth-card {
-        background: var(--paper); border: 1px solid var(--border); border-radius: 20px; position: relative; z-index: 1;
+        background: #FFFDF8; border: 1px solid #E5DDC8; border-radius: 20px; position: relative; z-index: 1;
         padding: 34px 34px 28px; width: 100%; max-width: 420px;
       }
-      .auth-brand { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+      .auth-topbar { position: relative; z-index: 1; width: 100%; max-width: 1040px; display: flex; align-items: center; justify-content: space-between; padding: 6px 4px 28px; } .auth-topbar-brand { display: flex; align-items: center; gap: 10px; } .auth-topbar-brand .brand-mark { font-size: 24px; } .auth-topbar-title { font-family: 'Fraunces', serif; font-size: 19px; font-weight: 600; color: #F6EFDD; } .auth-topbar-icon { font-size: 22px; } .auth-center { position: relative; z-index: 1; width: 100%; flex: 1; display: flex; align-items: center; justify-content: center; } .auth-brand { display: none; }
       .auth-brand .brand-title { font-family: 'Fraunces', serif; font-size: 18px; font-weight: 600; color: var(--deep); }
       .auth-brand .brand-sub { font-size: 11.5px; color: var(--ink-soft); }
       .auth-verse { font-family: 'Fraunces', serif; font-style: italic; font-size: 14.5px; color: var(--ink-soft); margin: 0 0 20px; line-height: 1.5; }
