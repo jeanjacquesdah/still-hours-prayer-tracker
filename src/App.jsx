@@ -1312,7 +1312,7 @@ function Reminders({ reminders, setReminders }) {
                 <Bell size={15} />
                 <div className="reminder-manage-main">
                   <span className="reminder-manage-label">{r.label}</span>
-                  <span className="reminder-manage-meta">{r.time} · {r.days.map((d) => DAY_NAMES[d]).join(", ")}</span>
+                  <span className="reminder-manage-meta">{(() => { const [h, m] = r.time.split(":").map(Number); const h12 = h % 12 || 12; return `${h12}:${String(m).padStart(2, "0")} ${h < 12 ? "AM" : "PM"}`; })()} · {r.days.map((d) => DAY_NAMES[d]).join(", ")}</span>
                 </div>
                 <button className="icon-btn" onClick={() => remove(r.id)} aria-label="Delete reminder"><Trash2 size={15} /></button>
               </li>
