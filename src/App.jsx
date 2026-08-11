@@ -1800,14 +1800,14 @@ function GlobalStyle() {
       .profile-stats-row span { font-size: 11.5px; color: var(--ink-soft); text-transform: uppercase; letter-spacing: 0.04em; }
       .avatar-picker { display: flex; gap: 8px; flex-wrap: wrap; }
       .avatar-choice { width: 40px; height: 40px; border-radius: 50%; border: 1px solid var(--border); background: var(--parchment); font-size: 18px; cursor: pointer; }
-      .avatar-choice.on { border: 2px solid var(--accent); background: var(--accent-soft); } .auth-decor { position: absolute; inset: 0; pointer-events: none; } .auth-decor-icon { position: absolute; font-size: 48px; opacity: 0.55; filter: drop-shadow(0 1px 2px rgba(0,0,0,0.15)); }
+      .avatar-choice.on { border: 2px solid var(--accent); background: var(--accent-soft); } .auth-decor { position: absolute; inset: 0; pointer-events: none; } .auth-decor-icon { position: absolute; font-size: 48px; opacity: 0.55; filter: drop-shadow(0 1px 2px rgba(0,0,0,0.15)); } .auth-screen::before { content: ""; position: absolute; inset: 0; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 240 320'%3E%3Ccircle cx='120' cy='44' r='27' fill='white'/%3E%3Cpath d='M75,92 C60,150 50,230 55,270 C60,305 90,315 120,315 C150,315 180,305 185,270 C190,230 180,150 165,92 C150,105 90,105 75,92 Z' fill='white'/%3E%3Cpath d='M120,120 C112,140 100,150 88,148 C95,168 108,182 120,184 C132,182 145,168 152,148 C140,150 128,140 120,120 Z' fill='white'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: center 58%; background-size: min(70vw, 480px) auto; opacity: 0.16; pointer-events: none; }
 
       .auth-screen {
         min-height: 100vh; width: 100%; display: flex; align-items: center; justify-content: center;
         background: linear-gradient(135deg, #2F3A56 0%, #5B4B8A 100%); padding: 20px; font-family: 'Inter', sans-serif; position: relative; overflow: hidden;
       }
       .auth-card {
-        background: var(--paper); border: 1px solid var(--border); border-radius: 20px;
+        background: var(--paper); border: 1px solid var(--border); border-radius: 20px; position: relative; z-index: 1;
         padding: 34px 34px 28px; width: 100%; max-width: 420px;
       }
       .auth-brand { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
