@@ -4,12 +4,13 @@ import {
   BarChart3, User, Play, Pause, RotateCcw, Flame, CheckCircle2,
   Circle, Search, Plus, X, Award, Calendar, Sparkles, Link2, Menu,
   Trash2, ChevronRight, Sunrise, PlusCircle, BookMarked, TrendingUp,
-  Pencil, Save, Copy, LogOut, Mail, UserX, UserPlus, Check,
+  Pencil, Save, Copy, LogOut, Mail, UserX, UserPlus, Check, AlertTriangle,
 } from "lucide-react";
 import {
   LineChart, Line, BarChart, Bar, XAxis, YAxis, Tooltip,
   ResponsiveContainer, CartesianGrid, PieChart, Pie, Cell,
 } from "recharts";
+import { supabase, supabaseConfigured } from "./supabaseClient";
 
 /* ============================= CONSTANTS ============================= */
 
@@ -154,82 +155,15 @@ function weekMinutes(sessions, weekStart) {
     .reduce((a, s) => a + s.duration, 0);
 }
 
-/* ============================= SEED DATA ============================= */
-
-function seedSessions() {
-  const notes = [
-    "Felt a real sense of peace during this time.",
-    "Prayed for the family situation we discussed last week.",
-    "Read through Psalm 23 slowly, sat with it a while.",
-    "Quiet morning, needed the stillness.",
-    "Brought the week's worries before the Lord.",
-    "Gave thanks for how things worked out at work.",
-    "",
-  ];
-  const cats = DEFAULT_CATEGORIES;
-  const out = [];
-  for (let i = 20; i >= 0; i--) {
-    if (Math.random() < 0.28) continue; // skip some days
-    const d = new Date();
-    d.setDate(d.getDate() - i);
-    d.setHours(6 + Math.floor(Math.random() * 14), Math.floor(Math.random() * 60), 0, 0);
-    out.push({
-      id: uid(),
-      date: d.toISOString(),
-      duration: 10 + Math.floor(Math.random() * 40),
-      category: cats[Math.floor(Math.random() * cats.length)],
-      notes: notes[Math.floor(Math.random() * notes.length)],
-    });
-  }
-  return out.sort((a, b) => new Date(b.date) - new Date(a.date));
-}
-
-const SEED_JOURNAL = [
-  {
-    id: uid(),
-    date: new Date(Date.now() - 3 * 86400000).toISOString(),
-    title: "Stillness in the morning",
-    text: "Woke up early and just sat in silence before turning to words. There's something about the quiet that says more than any request I could bring.",
-  },
-  {
-    id: uid(),
-    date: new Date(Date.now() - 8 * 86400000).toISOString(),
-    title: "Answered, finally",
-    text: "The thing I've been bringing up for months shifted this week. Grateful doesn't feel like a big enough word for it.",
-  },
-];
-
-const SEED_REQUESTS = [
-  { id: uid(), name: "Mom's recovery", status: "ongoing", notes: "Continued healing after surgery.", dateAdded: new Date(Date.now() - 14 * 86400000).toISOString(), dateAnswered: null },
-  { id: uid(), name: "Job interview for Sam", status: "answered", notes: "Offer came through Tuesday.", dateAdded: new Date(Date.now() - 20 * 86400000).toISOString(), dateAnswered: new Date(Date.now() - 2 * 86400000).toISOString() },
-  { id: uid(), name: "Wisdom for a decision", status: "ongoing", notes: "Whether to move for the new role.", dateAdded: new Date(Date.now() - 5 * 86400000).toISOString(), dateAnswered: null },
-];
-
-const SEED_CHAIN = [
-  { id: uid(), name: "Grandma Ruth", note: "Health and comfort", prayedDate: null },
-  { id: uid(), name: "The Alvarez family", note: "New baby, adjusting to sleep", prayedDate: toKey(new Date()) },
-  { id: uid(), name: "Pastor Dan", note: "Wisdom for Sunday's message", prayedDate: null },
-  { id: uid(), name: "James (coworker)", note: "Going through a hard season", prayedDate: null },
-];
-
-const SEED_REMINDERS = [
-  { id: uid(), label: "Morning quiet time", time: "06:30", days: [1, 2, 3, 4, 5] },
-  { id: uid(), label: "Evening gratitude", time: "21:00", days: [0, 1, 2, 3, 4, 5, 6] },
-  { id: uid(), label: "Sunday intercession", time: "17:00", days: [0] },
-];
+/* ============================= DEFAULTS ============================= */
+// Real accounts start empty and are populated from Supabase; each panel
+// already renders an EmptyState when its list has no rows.
 
 const CHALLENGE = {
   title: "30 Days of Faithfulness",
   goalHours: 100,
   endsInDays: 9,
 };
-
-const SEED_CHALLENGE_MEMBERS = [
-  { id: uid(), name: "Priya", hours: 14.5 },
-  { id: uid(), name: "Marcus", hours: 11.2 },
-  { id: uid(), name: "Grace", hours: 9.8 },
-  { id: uid(), name: "Tomas", hours: 7.4 },
-];
 
 /* ============================= BADGES ============================= */
 
@@ -333,16 +267,44 @@ function EmptyState({ icon: Icon, title, body }) {
 
 /* ============================= AUTH ============================= */
 
-function AuthGate({ accounts, setAccounts, setCurrentUser }) {
+function SetupNeeded() {
+  return (
+    <div className="auth-screen">
+      <div className="auth-center">
+        <div className="auth-card">
+          <div className="auth-brand">
+            <span className="brand-mark">🕯️</span>
+            <div>
+              <div className="brand-title">Still Hours</div>
+              <div className="brand-sub">a prayer companion</div>
+            </div>
+          </div>
+          <div className="setup-notice">
+            <AlertTriangle size={18} />
+            <p>
+              This app isn't connected to a database yet. Add
+              <code> VITE_SUPABASE_URL</code> and <code>VITE_SUPABASE_ANON_KEY</code>
+              {" "}to a <code>.env.local</code> file (or your Vercel project's
+              environment variables) and reload. See <code>README.md</code> for
+              step-by-step setup.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function AuthGate() {
   const [mode, setMode] = useState("signup");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [sentTo, setSentTo] = useState("");
 
-  const findByEmail = (addr) => accounts.find((a) => a.email.toLowerCase() === addr.trim().toLowerCase());
-
-  const submitSignup = (e) => {
+  const submitSignup = async (e) => {
     e.preventDefault();
     setError("");
     if (!firstName.trim() || !lastName.trim() || !email.trim()) {
@@ -353,33 +315,71 @@ function AuthGate({ accounts, setAccounts, setCurrentUser }) {
       setError("Enter a valid email address, like you@example.com.");
       return;
     }
-    if (findByEmail(email)) {
-      setError("An account with that email already exists — log in instead.");
-      setMode("login");
+    setLoading(true);
+    const { error: signUpError } = await supabase.auth.signInWithOtp({
+      email: email.trim(),
+      options: {
+        shouldCreateUser: true,
+        emailRedirectTo: window.location.origin,
+        data: { first_name: firstName.trim(), last_name: lastName.trim() },
+      },
+    });
+    setLoading(false);
+    if (signUpError) {
+      setError(signUpError.message || "Something went wrong sending your sign-in link.");
       return;
     }
-    const account = {
-      id: uid(),
-      firstName: firstName.trim(),
-      lastName: lastName.trim(),
-      email: email.trim(),
-      memberSince: new Date().toISOString(),
-    };
-    setAccounts((prev) => [...prev, account]);
-    setCurrentUser(account);
+    setSentTo(email.trim());
   };
 
-  const submitLogin = (e) => {
+  const submitLogin = async (e) => {
     e.preventDefault();
     setError("");
-    const found = findByEmail(email);
-    if (!found) {
+    if (!email.trim()) {
+      setError("Enter your email to continue.");
+      return;
+    }
+    setLoading(true);
+    const { error: loginError } = await supabase.auth.signInWithOtp({
+      email: email.trim(),
+      options: { shouldCreateUser: false, emailRedirectTo: window.location.origin },
+    });
+    setLoading(false);
+    if (loginError) {
       setError("No account found with that email — sign up below.");
       setMode("signup");
       return;
     }
-    setCurrentUser(found);
+    setSentTo(email.trim());
   };
+
+  if (sentTo) {
+    return (
+      <div className="auth-screen"><div className="auth-topbar"><div className="auth-topbar-brand"><span className="brand-mark">🕯️</span><span className="auth-topbar-title">Still Hours</span></div></div>
+        <div className="auth-center">
+          <div className="auth-card">
+            <div className="auth-brand">
+              <span className="brand-mark">🕯️</span>
+              <div>
+                <div className="brand-title">Still Hours</div>
+                <div className="brand-sub">a prayer companion</div>
+              </div>
+            </div>
+            <p className="auth-verse">"Be still, and know that I am God." — Psalm 46:10, KJV</p>
+            <div className="setup-notice">
+              <Mail size={18} />
+              <p>We sent a sign-in link to <strong>{sentTo}</strong>. Open it on this device to continue — no password needed.</p>
+            </div>
+            <div className="full-width form-actions">
+              <button type="button" className="secondary-btn" onClick={() => setSentTo("")}>
+                Use a different email
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="auth-screen"><div className="auth-topbar"><div className="auth-topbar-brand"><span className="brand-mark">🕯️</span><span className="auth-topbar-title">Still Hours</span></div></div><div className="auth-center"><div className="auth-visual" aria-hidden="true"><div className="mock-laptop"><div className="mock-laptop-screen"><div className="mock-topbar"><span></span><span></span><span></span></div><div className="mock-app"><div className="mock-dash-greeting">Good morning, Demo User</div><div className="mock-verse-card"><p className="mock-verse-text">"In the morning will I direct my prayer unto thee."</p></div><div className="mock-stat-row"><div className="mock-stat-chip"><span className="mock-stat-num">8.1</span><span className="mock-stat-label">hrs</span></div><div className="mock-stat-chip"><span className="mock-stat-num">1</span><span className="mock-stat-label">streak</span></div><div className="mock-stat-chip"><span className="mock-stat-num">9%</span><span className="mock-stat-label">goal</span></div></div><div className="mock-bars"><span style={{height:"30%"}}></span><span style={{height:"55%"}}></span><span style={{height:"40%"}}></span><span style={{height:"70%"}}></span><span style={{height:"50%"}}></span><span style={{height:"85%"}}></span></div></div></div><div className="mock-laptop-base"></div></div><div className="mock-phone"><div className="mock-phone-notch"></div><div className="mock-phone-screen"><div className="mock-dash-greeting mock-dash-greeting-sm">Good morning</div><div className="mock-verse-card mock-verse-card-sm"><p className="mock-verse-text">"In the morning will I direct my prayer."</p></div><div className="mock-stat-row"><div className="mock-stat-chip"><span className="mock-stat-num">8.1</span><span className="mock-stat-label">hrs</span></div><div className="mock-stat-chip"><span className="mock-stat-num">9%</span><span className="mock-stat-label">goal</span></div></div><div className="mock-bars"><span style={{height:"30%"}}></span><span style={{height:"55%"}}></span><span style={{height:"40%"}}></span><span style={{height:"70%"}}></span><span style={{height:"50%"}}></span><span style={{height:"85%"}}></span></div></div><div className="mock-phone-home"></div></div></div>
@@ -415,7 +415,7 @@ function AuthGate({ accounts, setAccounts, setCurrentUser }) {
             </label>
             {error && <p className="full-width auth-error">{error}</p>}
             <div className="full-width form-actions">
-              <button type="submit" className="primary-btn"><UserPlus size={16} /> Create account</button>
+              <button type="submit" className="primary-btn" disabled={loading}><UserPlus size={16} /> {loading ? "Sending link…" : "Create account"}</button>
             </div>
           </form>
         ) : (
@@ -425,11 +425,11 @@ function AuthGate({ accounts, setAccounts, setCurrentUser }) {
             </label>
             {error && <p className="full-width auth-error">{error}</p>}
             <div className="full-width form-actions">
-              <button type="submit" className="primary-btn"><Mail size={16} /> Log in</button>
+              <button type="submit" className="primary-btn" disabled={loading}><Mail size={16} /> {loading ? "Sending link…" : "Log in"}</button>
             </div>
           </form>
         )}
-        <p className="auth-note">This is an in-session account for demo purposes — no password needed, and data isn't saved once you close the tab.</p></div>
+        <p className="auth-note">No password needed — we'll email you a one-time sign-in link, and your progress is saved to your account from then on.</p></div>
       </div>
     </div>
   );
@@ -438,41 +438,258 @@ function AuthGate({ accounts, setAccounts, setCurrentUser }) {
 /* ============================= APP ============================= */
 
 export default function PrayerHoursApp() {
-  const [accounts, setAccounts] = useState([]);
-  const [currentUser, setCurrentUser] = useState(null);
+  const [session, setSession] = useState(undefined); // undefined = still checking, null = signed out
 
-  if (!currentUser) {
+  useEffect(() => {
+    if (!supabaseConfigured) { setSession(null); return; }
+    supabase.auth.getSession().then(({ data }) => setSession(data.session));
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, newSession) => {
+      setSession(newSession);
+    });
+    return () => listener.subscription.unsubscribe();
+  }, []);
+
+  if (!supabaseConfigured) {
+    return (<><GlobalStyle /><SetupNeeded /></>);
+  }
+
+  if (session === undefined) {
     return (
       <>
         <GlobalStyle />
-        <AuthGate accounts={accounts} setAccounts={setAccounts} setCurrentUser={setCurrentUser} />
+        <div className="auth-screen"><div className="auth-center"><p className="subtitle">Loading…</p></div></div>
       </>
     );
   }
 
-  return <MainApp account={currentUser} onLogout={() => setCurrentUser(null)} />;
+  if (!session) {
+    return (
+      <>
+        <GlobalStyle />
+        <AuthGate />
+      </>
+    );
+  }
+
+  return <MainApp user={session.user} onLogout={() => supabase.auth.signOut()} />;
 }
 
-function MainApp({ account, onLogout }) {
+/* ============================= SUPABASE SYNC ============================= */
+// Each app-side list (sessions, journal, requests, ...) stays a plain React
+// state array exactly as before, so every existing add/edit/delete handler
+// in the panels below needs no changes. This hook loads the user's rows for
+// one table on login, then watches that array and pushes any additions,
+// edits, or deletions up to Supabase, scoped to the signed-in user via RLS.
+function useCollectionSync({ table, userId, rows, setRows, getId, toDb, fromDb, orderBy }) {
+  const lastSynced = useRef(new Map());
+  const loadedRef = useRef(false);
+  const [loaded, setLoaded] = useState(false);
+
+  useEffect(() => {
+    if (!userId) return;
+    let cancelled = false;
+    loadedRef.current = false;
+    setLoaded(false);
+    (async () => {
+      let query = supabase.from(table).select("*").eq("user_id", userId);
+      if (orderBy) query = query.order(orderBy.column, { ascending: orderBy.ascending ?? true });
+      const { data, error } = await query;
+      if (cancelled) return;
+      if (error) {
+        console.error(`Failed to load ${table}`, error);
+        loadedRef.current = true;
+        setLoaded(true);
+        return;
+      }
+      const mappedRows = (data || []).map(fromDb);
+      const snap = new Map();
+      mappedRows.forEach((r) => {
+        const id = String(getId(r));
+        snap.set(id, JSON.stringify({ ...toDb(r), id, user_id: userId }));
+      });
+      lastSynced.current = snap;
+      setRows(mappedRows);
+      loadedRef.current = true;
+      setLoaded(true);
+    })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [table, userId]);
+
+  useEffect(() => {
+    if (!userId || !loadedRef.current) return;
+    const dbRows = rows.map((r) => ({ ...toDb(r), id: String(getId(r)), user_id: userId }));
+    const currentIds = new Set(dbRows.map((r) => r.id));
+    const toDelete = [...lastSynced.current.keys()].filter((id) => !currentIds.has(id));
+    const changed = dbRows.filter((r) => lastSynced.current.get(r.id) !== JSON.stringify(r));
+    if (!toDelete.length && !changed.length) return;
+    (async () => {
+      if (toDelete.length) {
+        const { error } = await supabase.from(table).delete().eq("user_id", userId).in("id", toDelete);
+        if (!error) toDelete.forEach((id) => lastSynced.current.delete(id));
+        else console.error(`Failed to delete from ${table}`, error);
+      }
+      if (changed.length) {
+        const { error } = await supabase.from(table).upsert(changed);
+        if (!error) changed.forEach((r) => lastSynced.current.set(r.id, JSON.stringify(r)));
+        else console.error(`Failed to sync ${table}`, error);
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rows, userId]);
+
+  return loaded;
+}
+
+function fromDbProfile(row) {
+  return {
+    firstName: row.first_name || "",
+    lastName: row.last_name || "",
+    name: row.full_name || `${row.first_name || ""} ${row.last_name || ""}`.trim(),
+    email: row.email || "",
+    avatar: row.avatar || "🕊️",
+    weeklyGoalHours: Number(row.weekly_goal_hours) || 5,
+    memberSince: row.member_since || new Date().toISOString(),
+  };
+}
+
+function toDbProfile(profile, userId) {
+  return {
+    id: userId,
+    first_name: profile.firstName || "",
+    last_name: profile.lastName || "",
+    full_name: profile.name || "",
+    email: profile.email || "",
+    avatar: profile.avatar,
+    weekly_goal_hours: profile.weeklyGoalHours,
+    member_since: profile.memberSince,
+  };
+}
+
+function useProfileSync(userId, user) {
+  const [profile, setProfile] = useState(null);
+  const loadedRef = useRef(false);
+  const lastSynced = useRef("");
+
+  useEffect(() => {
+    if (!userId) return;
+    let cancelled = false;
+    (async () => {
+      const { data, error } = await supabase.from("profiles").select("*").eq("id", userId).maybeSingle();
+      if (cancelled) return;
+      let row = data;
+      if (!row) {
+        // Fallback in case the on-signup trigger hasn't run yet (e.g. schema
+        // was just applied) — create a default profile for this user.
+        const meta = user?.user_metadata || {};
+        const defaults = {
+          id: userId,
+          first_name: meta.first_name || "",
+          last_name: meta.last_name || "",
+          full_name: `${meta.first_name || ""} ${meta.last_name || ""}`.trim(),
+          email: user?.email || "",
+          avatar: "🕊️",
+          weekly_goal_hours: 5,
+          member_since: new Date().toISOString(),
+        };
+        const { data: inserted, error: insertError } = await supabase.from("profiles").insert(defaults).select().maybeSingle();
+        if (insertError) console.error("Failed to create profile", insertError);
+        row = inserted || defaults;
+      } else if (error) {
+        console.error("Failed to load profile", error);
+      }
+      lastSynced.current = JSON.stringify(toDbProfile(fromDbProfile(row), userId));
+      setProfile(fromDbProfile(row));
+      loadedRef.current = true;
+    })();
+    return () => { cancelled = true; };
+  }, [userId]);
+
+  useEffect(() => {
+    if (!userId || !loadedRef.current || !profile) return;
+    const dbRow = toDbProfile(profile, userId);
+    const serialized = JSON.stringify(dbRow);
+    if (serialized === lastSynced.current) return;
+    (async () => {
+      const { error } = await supabase.from("profiles").upsert(dbRow);
+      if (!error) lastSynced.current = serialized;
+      else console.error("Failed to sync profile", error);
+    })();
+  }, [profile, userId]);
+
+  return [profile, setProfile, loadedRef.current];
+}
+
+function MainApp({ user, onLogout }) {
   const [view, setView] = useState("dashboard");
   const [navOpen, setNavOpen] = useState(false);
 
-  const [profile, setProfile] = useState({
-    name: `${account.firstName} ${account.lastName}`,
-    email: account.email,
-    avatar: "🕊️",
-    weeklyGoalHours: 5,
-    memberSince: account.memberSince,
+  const [profile, setProfile, profileLoaded] = useProfileSync(user.id, user);
+
+  const [sessions, setSessions] = useState([]);
+  const sessionsLoaded = useCollectionSync({
+    table: "sessions", userId: user.id, rows: sessions, setRows: setSessions, getId: (r) => r.id,
+    toDb: (s) => ({ date: s.date, duration: Number(s.duration), category: s.category, notes: s.notes || "" }),
+    fromDb: (r) => ({ id: r.id, date: r.date, duration: r.duration, category: r.category, notes: r.notes || "" }),
+    orderBy: { column: "date", ascending: false },
   });
 
-  const [sessions, setSessions] = useState(() => seedSessions());
   const [customCategories, setCustomCategories] = useState([]);
+  const categoriesLoaded = useCollectionSync({
+    table: "custom_categories", userId: user.id, rows: customCategories, setRows: setCustomCategories,
+    getId: (name) => name,
+    toDb: (name) => ({ name }),
+    fromDb: (r) => r.name,
+  });
   const allCategories = useMemo(() => [...DEFAULT_CATEGORIES, ...customCategories], [customCategories]);
 
-  const [journal, setJournal] = useState(SEED_JOURNAL);
-  const [requests, setRequests] = useState(SEED_REQUESTS);
-  const [chain, setChain] = useState(SEED_CHAIN);
-  const [reminders, setReminders] = useState(SEED_REMINDERS);
+  const [journal, setJournal] = useState([]);
+  const journalLoaded = useCollectionSync({
+    table: "journal_entries", userId: user.id, rows: journal, setRows: setJournal, getId: (r) => r.id,
+    toDb: (j) => ({ date: j.date, title: j.title, body: j.text }),
+    fromDb: (r) => ({ id: r.id, date: r.date, title: r.title, text: r.body || "" }),
+    orderBy: { column: "date", ascending: false },
+  });
+
+  const [requests, setRequests] = useState([]);
+  const requestsLoaded = useCollectionSync({
+    table: "prayer_requests", userId: user.id, rows: requests, setRows: setRequests, getId: (r) => r.id,
+    toDb: (r) => ({ name: r.name, notes: r.notes || "", status: r.status, date_added: r.dateAdded, date_answered: r.dateAnswered }),
+    fromDb: (r) => ({ id: r.id, name: r.name, notes: r.notes || "", status: r.status, dateAdded: r.date_added, dateAnswered: r.date_answered }),
+    orderBy: { column: "date_added", ascending: false },
+  });
+
+  const [chain, setChain] = useState([]);
+  const chainLoaded = useCollectionSync({
+    table: "prayer_chain", userId: user.id, rows: chain, setRows: setChain, getId: (r) => r.id,
+    toDb: (c) => ({ name: c.name, note: c.note || "", prayed_date: c.prayedDate }),
+    fromDb: (r) => ({ id: r.id, name: r.name, note: r.note || "", prayedDate: r.prayed_date }),
+  });
+
+  const [reminders, setReminders] = useState([]);
+  const remindersLoaded = useCollectionSync({
+    table: "reminders", userId: user.id, rows: reminders, setRows: setReminders, getId: (r) => r.id,
+    toDb: (r) => ({ label: r.label, time: r.time, days: r.days }),
+    fromDb: (r) => ({ id: r.id, label: r.label, time: r.time, days: r.days || [] }),
+  });
+
+  const [challengeMembers, setChallengeMembers] = useState([]);
+  const membersLoaded = useCollectionSync({
+    table: "challenge_members", userId: user.id, rows: challengeMembers, setRows: setChallengeMembers, getId: (r) => r.id,
+    toDb: (m) => ({ name: m.name, hours: m.hours }),
+    fromDb: (r) => ({ id: r.id, name: r.name, hours: Number(r.hours) || 0 }),
+  });
+
+  const dataReady = profileLoaded && sessionsLoaded && categoriesLoaded && journalLoaded
+    && requestsLoaded && chainLoaded && remindersLoaded && membersLoaded;
+
+  const account = useMemo(() => ({
+    id: user.id,
+    firstName: profile?.firstName || "",
+    lastName: profile?.lastName || "",
+    email: profile?.email || user.email || "",
+    memberSince: profile?.memberSince || new Date().toISOString(),
+  }), [user, profile]);
 
   const [verseIdx, setVerseIdx] = useState(() => Math.floor(Math.random() * VERSES.length));
   useEffect(() => {
@@ -492,6 +709,7 @@ function MainApp({ account, onLogout }) {
   const [celebration, setCelebration] = useState(false);
   const prevWeekPctRef = useRef(0);
   useEffect(() => {
+    if (!profile) return;
     const goalMin = profile.weeklyGoalHours * 60;
     const pct = goalMin > 0 ? (thisWeekMinutes / goalMin) * 100 : 0;
     if (pct >= 100 && prevWeekPctRef.current < 100) {
@@ -500,7 +718,7 @@ function MainApp({ account, onLogout }) {
       return () => clearTimeout(t);
     }
     prevWeekPctRef.current = pct;
-  }, [thisWeekMinutes, profile.weeklyGoalHours]);
+  }, [thisWeekMinutes, profile?.weeklyGoalHours]);
 
   const chainAllPrayedToday = chain.length > 0 && chain.every((p) => p.prayedDate === toKey(new Date()));
 
@@ -524,8 +742,6 @@ function MainApp({ account, onLogout }) {
     );
   }, []);
 
-  const [challengeMembers, setChallengeMembers] = useState(() => SEED_CHALLENGE_MEMBERS);
-
   const NAV_ITEMS = [
     { id: "dashboard", label: "Dashboard", icon: Home },
     { id: "log", label: "Session log", icon: NotebookPen },
@@ -538,6 +754,19 @@ function MainApp({ account, onLogout }) {
     { id: "stats", label: "Statistics", icon: BarChart3 },
     { id: "profile", label: "Profile", icon: User },
   ];
+
+  if (!dataReady || !profile) {
+    return (
+      <>
+        <GlobalStyle />
+        <div className="ph-app">
+          <div className="auth-center" style={{ width: "100%" }}>
+            <p className="subtitle">Loading your progress…</p>
+          </div>
+        </div>
+      </>
+    );
+  }
 
   return (
     <div className="ph-app">
@@ -1815,6 +2044,9 @@ function GlobalStyle() {
       .auth-brand .brand-sub { font-size: 11.5px; color: var(--ink-soft); }
       .auth-verse { font-family: 'Fraunces', serif; font-style: italic; font-size: 14.5px; color: var(--ink-soft); margin: 0 0 20px; line-height: 1.5; }
       .auth-error { font-size: 12.5px; color: #A24B3E; background: var(--mauve-soft); border-radius: 8px; padding: 8px 12px; margin: 0; }
+      .setup-notice { display: flex; align-items: flex-start; gap: 10px; font-size: 13px; color: var(--ink-soft); background: var(--accent-soft); border-radius: 10px; padding: 12px 14px; margin: 14px 0; line-height: 1.5; }
+      .setup-notice svg { flex-shrink: 0; margin-top: 2px; color: var(--accent); }
+      .setup-notice code { background: rgba(0,0,0,0.06); border-radius: 4px; padding: 1px 5px; font-family: 'IBM Plex Mono', monospace; font-size: 12px; }
       .auth-note { font-size: 11.5px; color: var(--ink-soft); margin: 18px 0 0; line-height: 1.5; } .auth-visual { position: relative; width: 460px; height: 380px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; } .mock-laptop { position: absolute; left: 0; top: 30px; width: 340px; z-index: 1; filter: drop-shadow(0 20px 30px rgba(0,0,0,0.35)); } .mock-laptop-screen { background: #1F2437; border-radius: 10px 10px 4px 4px; padding: 10px 10px 16px; border: 6px solid #12141F; } .mock-topbar { display: flex; gap: 5px; padding: 2px 4px 10px; } .mock-topbar span { width: 7px; height: 7px; border-radius: 50%; background: rgba(255,255,255,0.25); } .mock-app { background: #F5F1E6; border-radius: 6px; padding: 14px 14px 16px; min-height: 170px; } .mock-app-title { font-family: 'Fraunces', serif; font-size: 13px; font-weight: 600; color: #2F3A56; margin-bottom: 12px; } .mock-req-item { display: flex; align-items: center; gap: 8px; padding: 8px 0; border-bottom: 1px solid #E5DDC8; } .mock-req-item:last-child { border-bottom: none; } .mock-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; } .mock-dot-mauve { background: #96727E; } .mock-dot-sage { background: #7C9179; } .mock-dot-accent { background: #C7963C; } .mock-lines { flex: 1; display: flex; flex-direction: column; gap: 5px; } .mock-line-main { display: block; width: 70%; height: 7px; border-radius: 4px; background: #D9D2BC; } .mock-line-sub { display: block; width: 45%; height: 6px; border-radius: 4px; background: #E9E3D1; } .mock-laptop-base { height: 12px; width: 112%; margin-left: -6%; background: linear-gradient(#2B2F42, #12141F); border-radius: 0 0 14px 14px; margin-top: 2px; } .mock-phone { position: absolute; right: 10px; bottom: -20px; width: 148px; z-index: 2; background: #12141F; border-radius: 30px; padding: 12px 9px 16px; box-shadow: 0 20px 30px rgba(0,0,0,0.35); } .mock-phone-notch { position: absolute; top: 12px; left: 50%; transform: translateX(-50%); width: 46%; height: 14px; background: #12141F; border-radius: 0 0 10px 10px; z-index: 3; } .mock-phone-screen { background: #F5F1E6; border-radius: 20px; padding: 22px 10px 14px; min-height: 230px; position: relative; overflow: hidden; } .mock-phone-screen .mock-app-title { font-size: 12px; margin-bottom: 10px; } .mock-stat-row { display: flex; gap: 6px; margin-bottom: 14px; } .mock-stat-chip { flex: 1; background: #F3E4C4; border-radius: 8px; padding: 6px 8px; display: flex; flex-direction: column; align-items: center; } .mock-stat-num { font-family: 'Fraunces', serif; font-size: 14px; font-weight: 600; color: #2F3A56; } .mock-stat-label { font-size: 8.5px; color: #736C5C; text-transform: uppercase; letter-spacing: 0.03em; } .mock-bars { display: flex; align-items: flex-end; gap: 4px; height: 60px; } .mock-bars span { flex: 1; background: #2F3A56; border-radius: 3px 3px 0 0; opacity: 0.85; } .mock-phone-home { width: 36%; height: 4px; background: rgba(255,255,255,0.35); border-radius: 3px; margin: 8px auto 0; } .mock-dash-greeting { font-family: 'Fraunces', serif; font-size: 13px; font-weight: 600; color: #2F3A56; margin-bottom: 8px; } .mock-dash-greeting-sm { font-size: 11px; } .mock-verse-card { background: #2F3A56; border-radius: 8px; padding: 8px 10px; margin-bottom: 10px; } .mock-verse-card .mock-verse-text { font-family: 'Fraunces', serif; font-style: italic; font-size: 9.5px; color: #F3EEDD; line-height: 1.4; margin: 0; } .mock-verse-card-sm .mock-verse-text { font-size: 8px; } @media (max-width: 900px) { .auth-visual { display: none; } }me="auth-center"><div className="auth-visual" aria-hidden="true"><div className="mock-laptop"><div className="mock-laptop-screen"><div className="mock-topbar"><span></span><span></span><span></span></div>ZZZTESTZZZ</div><div className="mock-laptop-base"></div></div><div className="mock-phone"><div className="mock-phone-notch"></div><div className="mock-phone-screen"><div className="mock-dash-greeting mock-dash-greeting-sm">Good morning</div><div className="mock-verse-card mock-verse-card-sm"><p className="mock-verse-text">"In the morning will I direct my prayer."</p></div><div className="mock-stat-row"><div className="mock-stat-chip"><span className="mock-stat-num">8.1</span><span className="mock-stat-label">hrs</span></div><div className="mock-stat-chip"><span className="mock-stat-num">9%</span><span className="mock-stat-label">goal</span></div></div><div className="mock-bars"><span style={{height:"30%"}}></span><span style={{height:"55%"}}></span><span style={{height:"40%"}}></span><span style={{height:"70%"}}></span><span style={{height:"50%"}}></span><span style={{height:"85%"}}></span></div></div><div className="mock-phone-home"></div></div></div>
 
       .copy-link-row { display: flex; flex-direction: column; gap: 6px; }
