@@ -2,7 +2,7 @@
 
 A calming personal prayer-hours tracking web app built with React + Vite, backed by [Supabase](https://supabase.com) (free tier) for real accounts and persistent data.
 
-Sign-in is passwordless: enter your name and email once, and a one-time sign-in link is emailed to you. Everything you log — sessions, journal entries, prayer requests, your prayer chain, reminders, and profile settings — is saved to your account and will still be there the next time you sign in, on any device.
+Sign-in uses a standard email + password flow: create an account with your name, email, and a password, confirm your email, then log in. Everything you log — sessions, journal entries, prayer requests, your prayer chain, reminders, and profile settings — is saved to your account and will still be there the next time you sign in, on any device.
 
 ## One-time setup (Supabase)
 
@@ -14,7 +14,7 @@ Sign-in is passwordless: enter your name and email once, and a one-time sign-in 
 4. Go to **Authentication -> URL Configuration** and set:
    - **Site URL** to your deployed app's URL (e.g. `https://still-hours-prayer-tracker.vercel.app`)
    - Add both your production URL and `http://localhost:5173` (for local dev) under **Redirect URLs**
-   - By default Supabase requires email confirmation for new sign-ups, which works fine with this passwordless flow — no changes needed there.
+   - By default Supabase requires email confirmation for new sign-ups, which works fine with this email + password flow — no changes needed there.
 
 ## Connecting the app to Supabase
 

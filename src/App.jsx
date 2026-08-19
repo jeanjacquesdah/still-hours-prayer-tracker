@@ -4,7 +4,7 @@ import {
   BarChart3, User, Play, Pause, RotateCcw, Flame, CheckCircle2,
   Circle, Search, Plus, X, Award, Calendar, Sparkles, Link2, Menu,
   Trash2, ChevronRight, Sunrise, PlusCircle, BookMarked, TrendingUp,
-  Pencil, Save, Copy, LogOut, Mail, UserX, UserPlus, Check, AlertTriangle,
+  Pencil, Save, Copy, LogOut, Mail, UserX, UserPlus, Check, AlertTriangle, Lock,
 } from "lucide-react";
 import {
   LineChart, Line, BarChart, Bar, XAxis, YAxis, Tooltip,
@@ -300,39 +300,66 @@ function AuthGate() {
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [sentTo, setSentTo] = useState("");
+  const [sentKind, setSentKind] = useState("confirm"); // "confirm" | "reset"
 
   const submitSignup = async (e) => {
     e.preventDefault();
     setError("");
-    if (!firstName.trim() || !lastName.trim() || !email.trim()) {
-      setError("Fill in first name, last name, and email to continue.");
+    if (!firstName.trim() || !lastName.trim() || !email.trim() || !password) {
+      setError("Fill in first name, last name, email, and password to continue.");
       return;
     }
     if (!/^\S+@\S+\.\S+$/.test(email.trim())) {
       setError("Enter a valid email address, like you@example.com.");
       return;
     }
+    if (password.length < 6) {
+      setError("Password must be at least 6 characters.");
+      return;
+    }
     setLoading(true);
-    const { error: signUpError } = await supabase.auth.signInWithOtp({
+    const { data, error: signUpError } = await supabase.auth.signUp({
       email: email.trim(),
+      password,
       options: {
-        shouldCreateUser: true,
-        emailRedirectTo: window.location.origin,
         data: { first_name: firstName.trim(), last_name: lastName.trim() },
       },
     });
     setLoading(false);
     if (signUpError) {
-      setError(signUpError.message || "Something went wrong sending your sign-in link.");
+      setError(signUpError.message || "Something went wrong creating your account.");
       return;
     }
-    setSentTo(email.trim());
+    if (!data.session) {
+      setSentKind("confirm");
+      setSentTo(email.trim());
+    }
   };
 
   const submitLogin = async (e) => {
+    e.preventDefault();
+    setError("");
+    if (!email.trim() || !password) {
+      setError("Enter your email and password to continue.");
+      return;
+    }
+    setLoading(true);
+    const { error: loginError } = await supabase.auth.signInWithPassword({
+      email: email.trim(),
+      password,
+    });
+    setLoading(false);
+    if (loginError) {
+      setError(loginError.message || "Incorrect email or password.");
+      return;
+    }
+  };
+
+  const submitForgot = async (e) => {
     e.preventDefault();
     setError("");
     if (!email.trim()) {
@@ -340,16 +367,15 @@ function AuthGate() {
       return;
     }
     setLoading(true);
-    const { error: loginError } = await supabase.auth.signInWithOtp({
-      email: email.trim(),
-      options: { shouldCreateUser: false, emailRedirectTo: window.location.origin },
+    const { error: resetError } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+      redirectTo: window.location.origin,
     });
     setLoading(false);
-    if (loginError) {
-      setError("No account found with that email — sign up below.");
-      setMode("signup");
+    if (resetError) {
+      setError(resetError.message || "Something went wrong sending the reset link.");
       return;
     }
+    setSentKind("reset");
     setSentTo(email.trim());
   };
 
@@ -368,11 +394,15 @@ function AuthGate() {
             <p className="auth-verse">"Be still, and know that I am God." — Psalm 46:10, KJV</p>
             <div className="setup-notice">
               <Mail size={18} />
-              <p>We sent a sign-in link to <strong>{sentTo}</strong>. Open it on this device to continue — no password needed.</p>
+              <p>
+                {sentKind === "reset"
+                  ? <>We sent a password reset link to <strong>{sentTo}</strong>. Open it to choose a new password.</>
+                  : <>We sent a confirmation link to <strong>{sentTo}</strong>. Confirm your email, then log in with your password.</>}
+              </p>
             </div>
             <div className="full-width form-actions">
-              <button type="button" className="secondary-btn" onClick={() => setSentTo("")}>
-                Use a different email
+              <button type="button" className="secondary-btn" onClick={() => { setSentTo(""); setMode("login"); }}>
+                Back to log in
               </button>
             </div>
           </div>
@@ -393,16 +423,33 @@ function AuthGate() {
         </div>
         <p className="auth-verse">"Be still, and know that I am God." — Psalm 46:10, KJV</p>
 
-        <div className="tab-row">
-          <button className={`tab ${mode === "signup" ? "active" : ""}`} onClick={() => { setMode("signup"); setError(""); }}>
-            <UserPlus size={14} /> Sign up
-          </button>
-          <button className={`tab ${mode === "login" ? "active" : ""}`} onClick={() => { setMode("login"); setError(""); }}>
-            <Mail size={14} /> Log in
-          </button>
-        </div>
+        {mode !== "forgot" && (
+          <div className="tab-row">
+            <button className={`tab ${mode === "signup" ? "active" : ""}`} onClick={() => { setMode("signup"); setError(""); setPassword(""); }}>
+              <UserPlus size={14} /> Sign up
+            </button>
+            <button className={`tab ${mode === "login" ? "active" : ""}`} onClick={() => { setMode("login"); setError(""); setPassword(""); }}>
+              <Mail size={14} /> Log in
+            </button>
+          </div>
+        )}
 
-        {mode === "signup" ? (
+        {mode === "forgot" ? (
+          <form className="form-grid" onSubmit={submitForgot} noValidate>
+            <label className="full-width">Email
+              <input type="text" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" />
+            </label>
+            {error && <p className="full-width auth-error">{error}</p>}
+            <div className="full-width form-actions">
+              <button type="submit" className="primary-btn" disabled={loading}><Mail size={16} /> {loading ? "Sending…" : "Send reset link"}</button>
+            </div>
+            <div className="full-width form-actions">
+              <button type="button" className="secondary-btn" onClick={() => { setMode("login"); setError(""); }}>
+                Back to log in
+              </button>
+            </div>
+          </form>
+        ) : mode === "signup" ? (
           <form className="form-grid" onSubmit={submitSignup} noValidate>
             <label>First name
               <input value={firstName} onChange={(e) => setFirstName(e.target.value)} placeholder="First name" />
@@ -413,9 +460,12 @@ function AuthGate() {
             <label className="full-width">Email
               <input type="text" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" />
             </label>
+            <label className="full-width">Password
+              <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="At least 6 characters" autoComplete="new-password" />
+            </label>
             {error && <p className="full-width auth-error">{error}</p>}
             <div className="full-width form-actions">
-              <button type="submit" className="primary-btn" disabled={loading}><UserPlus size={16} /> {loading ? "Sending link…" : "Create account"}</button>
+              <button type="submit" className="primary-btn" disabled={loading}><UserPlus size={16} /> {loading ? "Creating account…" : "Create account"}</button>
             </div>
           </form>
         ) : (
@@ -423,13 +473,91 @@ function AuthGate() {
             <label className="full-width">Email
               <input type="text" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" />
             </label>
+            <label className="full-width">Password
+              <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Your password" autoComplete="current-password" />
+            </label>
             {error && <p className="full-width auth-error">{error}</p>}
             <div className="full-width form-actions">
-              <button type="submit" className="primary-btn" disabled={loading}><Mail size={16} /> {loading ? "Sending link…" : "Log in"}</button>
+              <button type="submit" className="primary-btn" disabled={loading}><Lock size={16} /> {loading ? "Logging in…" : "Log in"}</button>
+            </div>
+            <div className="full-width">
+              <button type="button" className="link-btn" onClick={() => { setMode("forgot"); setError(""); setPassword(""); }}>
+                Forgot password?
+              </button>
             </div>
           </form>
         )}
-        <p className="auth-note">No password needed — we'll email you a one-time sign-in link, and your progress is saved to your account from then on.</p></div>
+        <p className="auth-note">Your progress is saved to your account and synced wherever you log in.</p></div>
+      </div>
+    </div>
+  );
+}
+
+function ResetPassword({ onDone }) {
+  const [password, setPassword] = useState("");
+  const [confirm, setConfirm] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [done, setDone] = useState(false);
+
+  const submit = async (e) => {
+    e.preventDefault();
+    setError("");
+    if (password.length < 6) {
+      setError("Password must be at least 6 characters.");
+      return;
+    }
+    if (password !== confirm) {
+      setError("Passwords don't match.");
+      return;
+    }
+    setLoading(true);
+    const { error: updateError } = await supabase.auth.updateUser({ password });
+    setLoading(false);
+    if (updateError) {
+      setError(updateError.message || "Something went wrong updating your password.");
+      return;
+    }
+    setDone(true);
+  };
+
+  return (
+    <div className="auth-screen"><div className="auth-topbar"><div className="auth-topbar-brand"><span className="brand-mark">🕯️</span><span className="auth-topbar-title">Still Hours</span></div></div>
+      <div className="auth-center">
+        <div className="auth-card">
+          <div className="auth-brand">
+            <span className="brand-mark">🕯️</span>
+            <div>
+              <div className="brand-title">Still Hours</div>
+              <div className="brand-sub">a prayer companion</div>
+            </div>
+          </div>
+          {done ? (
+            <>
+              <div className="setup-notice">
+                <Check size={18} />
+                <p>Your password has been updated.</p>
+              </div>
+              <div className="full-width form-actions">
+                <button type="button" className="primary-btn" onClick={onDone}>Continue</button>
+              </div>
+            </>
+          ) : (
+            <form className="form-grid" onSubmit={submit} noValidate>
+              <p className="full-width auth-note" style={{ marginTop: 0 }}>Choose a new password for your account.</p>
+              <label className="full-width">New password
+                <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="At least 6 characters" autoComplete="new-password" />
+              </label>
+              <label className="full-width">Confirm new password
+                <input type="password" value={confirm} onChange={(e) => setConfirm(e.target.value)} placeholder="Re-enter password" autoComplete="new-password" />
+              </label>
+              {error && <p className="full-width auth-error">{error}</p>}
+              <div className="full-width form-actions">
+                <button type="submit" className="primary-btn" disabled={loading}><Lock size={16} /> {loading ? "Updating…" : "Update password"}</button>
+              </div>
+            </form>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -439,11 +567,15 @@ function AuthGate() {
 
 export default function PrayerHoursApp() {
   const [session, setSession] = useState(undefined); // undefined = still checking, null = signed out
+  const [passwordRecovery, setPasswordRecovery] = useState(false);
 
   useEffect(() => {
     if (!supabaseConfigured) { setSession(null); return; }
     supabase.auth.getSession().then(({ data }) => setSession(data.session));
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, newSession) => {
+    const { data: listener } = supabase.auth.onAuthStateChange((event, newSession) => {
+      if (event === "PASSWORD_RECOVERY") {
+        setPasswordRecovery(true);
+      }
       setSession(newSession);
     });
     return () => listener.subscription.unsubscribe();
@@ -458,6 +590,15 @@ export default function PrayerHoursApp() {
       <>
         <GlobalStyle />
         <div className="auth-screen"><div className="auth-center"><p className="subtitle">Loading…</p></div></div>
+      </>
+    );
+  }
+
+  if (passwordRecovery) {
+    return (
+      <>
+        <GlobalStyle />
+        <ResetPassword onDone={() => setPasswordRecovery(false)} />
       </>
     );
   }
